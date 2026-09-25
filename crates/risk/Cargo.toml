@@ -1,0 +1,11 @@
+[package]
+name = "tickrail-risk"
+description = "Inline pre-trade risk checks and kill switch"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tickrail-core.workspace = true
+tickrail-oms.workspace = true

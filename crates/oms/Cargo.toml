@@ -1,0 +1,10 @@
+[package]
+name = "tickrail-oms"
+description = "Order state machine, positions and PnL"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tickrail-core.workspace = true
