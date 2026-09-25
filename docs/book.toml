@@ -1,0 +1,9 @@
+[book]
+title = "tickrail developer guide"
+authors = ["The tickrail Authors"]
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/upendra-eth/tickrail"
+edit-url-template = "https://github.com/upendra-eth/tickrail/edit/main/docs/{path}"
