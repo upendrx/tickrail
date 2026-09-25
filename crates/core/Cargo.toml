@@ -1,0 +1,17 @@
+[package]
+name = "tickrail-core"
+description = "Core types, events, lock-free rings, clock and CPU placement for the HFT platform"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+libc.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "ring"
+harness = false
