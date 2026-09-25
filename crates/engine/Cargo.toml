@@ -1,0 +1,16 @@
+[package]
+name = "tickrail-engine"
+description = "Single-threaded trading engine: book, strategy, risk, OMS and venue wiring"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tickrail-core.workspace = true
+tickrail-book.workspace = true
+tickrail-oms.workspace = true
+tickrail-risk.workspace = true
+tickrail-strategies.workspace = true
+tickrail-journal.workspace = true
+serde.workspace = true
