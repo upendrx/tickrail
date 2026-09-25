@@ -17,6 +17,22 @@ cargo test --workspace
 
 `make help` lists the common tasks (tests, lints, benchmarks, docs, Python).
 
+## Branches
+
+| Branch | Purpose |
+|---|---|
+| `main` | Stable. Every release is a tag on `main` (`v0.1.0`, ...). Only release and hotfix merges land here. |
+| `develop` | Integration branch. Pull requests target `develop` unless they're hotfixes. |
+| `feature/<short-name>` | New functionality, e.g. `feature/bybit-adapter` |
+| `fix/<short-name>` | Bug fixes, e.g. `fix/kraken-reconnect` |
+| `docs/<short-name>` | Documentation only |
+| `perf/<short-name>` | Performance work, with benchmark numbers in the PR |
+| `release/vX.Y` | Release preparation: version bumps, changelog, final fixes |
+| `hotfix/<short-name>` | Urgent fixes branched from `main`, merged back to `main` and `develop` |
+
+Use lowercase and hyphens, and keep one topic per branch. Branch from
+`develop`, and rebase on it before opening the pull request.
+
 ## Before you open a pull request
 
 ```bash
@@ -25,7 +41,8 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-CI runs the same three on Linux (x86_64 and ARM64), macOS and Windows, plus
+CI runs the same three on every pull request and on pushes to `main`, `develop`
+and `release/*`: on Linux (x86_64 and ARM64), macOS and Windows, plus
 the Python tests. Keep pull requests focused: one adapter, one fix or one
 feature at a time is much easier to review than a bundle.
 
