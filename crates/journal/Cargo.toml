@@ -1,0 +1,11 @@
+[package]
+name = "tickrail-journal"
+description = "Fixed-size binary event journal for audit and deterministic replay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tickrail-core.workspace = true
+anyhow.workspace = true
