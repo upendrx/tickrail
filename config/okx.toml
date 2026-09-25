@@ -1,0 +1,27 @@
+# OKX spot, public channels (no API key), paper fills.
+#
+#   tickrail run --config config/okx.toml --set feed.symbol=ETH-USDT
+
+[feed]
+adapter = "okx"
+symbol = "BTC-USDT"
+
+[execution]
+venue = "paper"
+taker_fee_bps = 2.0
+
+[strategy]
+name = "market_maker"
+size = 0.001
+max_inventory = 0.01
+half_spread_ticks = 5
+skew_ticks = 10
+
+[risk]
+max_order_size = 0.002
+max_position = 0.02
+price_band_ticks = 5000
+max_loss = 100.0
+
+[engine]
+wait = "backoff"

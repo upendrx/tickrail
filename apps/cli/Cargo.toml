@@ -1,0 +1,33 @@
+[package]
+name = "tickrail-cli"
+description = "Command-line launcher: run, replay, export, list components"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "tickrail"
+path = "src/main.rs"
+
+[features]
+default = ["all-adapters"]
+all-adapters = ["tickrail-adapters/default"]
+
+[dependencies]
+tickrail-core.workspace = true
+tickrail-book.workspace = true
+tickrail-sim.workspace = true
+tickrail-oms.workspace = true
+tickrail-risk.workspace = true
+tickrail-strategies.workspace = true
+tickrail-journal.workspace = true
+tickrail-engine.workspace = true
+tickrail-adapters = { workspace = true, default-features = false }
+tickrail-telemetry.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+hdrhistogram.workspace = true
+serde.workspace = true
+toml.workspace = true
+tokio.workspace = true

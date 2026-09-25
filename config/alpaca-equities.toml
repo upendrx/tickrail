@@ -1,0 +1,34 @@
+# US equities via Alpaca's market-data stream, paper fills.
+# Needs a free Alpaca account; export your keys first:
+#
+#   export APCA_API_KEY_ID=...
+#   export APCA_API_SECRET_KEY=...
+#   tickrail run --config config/alpaca-equities.toml --set feed.symbol=MSFT
+#
+# The free plan streams IEX; set feed = "sip" with a paid plan for the full NBBO.
+# Data only flows during US market hours.
+
+[feed]
+adapter = "alpaca"
+symbol = "AAPL"
+feed = "iex"
+
+[execution]
+venue = "paper"
+taker_fee_bps = 0.5
+
+[strategy]
+name = "market_maker"
+size = 10                 # shares
+max_inventory = 100
+half_spread_ticks = 2
+skew_ticks = 5
+
+[risk]
+max_order_size = 20
+max_position = 200
+price_band_ticks = 500    # $5.00 from mid
+max_loss = 50.0
+
+[engine]
+wait = "backoff"

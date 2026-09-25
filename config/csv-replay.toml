@@ -1,0 +1,32 @@
+# Replays market data from a CSV file, for any market or data vendor.
+# Format (see docs/src/adapters.md):  ts_ns,event,side,price,qty
+#
+#   tickrail export data/binance-btcusdt.journal data/btc.csv --format feed
+#   tickrail run --config config/csv-replay.toml --set feed.path=data/btc.csv
+
+[feed]
+adapter = "csv"
+path = "examples/data/sample.csv"
+symbol = "SAMPLE"
+price_decimals = 2
+qty_decimals = 0
+speed = 1.0               # 0 = as fast as possible
+
+[execution]
+venue = "paper"
+
+[strategy]
+name = "market_maker"
+size = 10
+max_inventory = 100
+half_spread_ticks = 1
+skew_ticks = 3
+
+[risk]
+max_order_size = 20
+max_position = 200
+price_band_ticks = 100
+max_loss = 100.0
+
+[engine]
+wait = "backoff"

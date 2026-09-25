@@ -1,0 +1,44 @@
+# Local exchange simulator: a matching engine plus synthetic order flow.
+# No network needed. Some simulated traders know the hidden fair value, so
+# market making here has real adverse selection.
+#
+#   tickrail run --config config/simulator.toml
+
+[feed]
+adapter = "simulator"
+
+[simulator]
+symbol = "SIM"
+price_decimals = 2
+qty_decimals = 3
+start_price = 60000.0
+event_rate = 20000        # background events per second
+latency_us = 20           # one-way order latency
+volatility = 150          # hidden fair value, ticks per sqrt(second)
+seed = 42
+
+[execution]
+venue = "simulator"
+maker_fee_bps = 0.0
+taker_fee_bps = 2.0
+
+[strategy]
+name = "market_maker"
+size = 0.005
+max_inventory = 0.05
+half_spread_ticks = 1.0
+skew_ticks = 4.0
+
+[risk]
+max_order_size = 0.01
+max_position = 0.1
+price_band_ticks = 1000
+max_orders_per_sec = 200
+max_loss = 1000.0
+
+[engine]
+wait = "backoff"          # "spin" on a dedicated core for the lowest latency
+# journal = "data/sim.journal"
+
+[http]
+listen = "127.0.0.1:8080"

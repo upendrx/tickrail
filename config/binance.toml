@@ -1,0 +1,33 @@
+# Binance spot, public market data (no API key), paper fills.
+#
+#   tickrail run --config config/binance.toml
+#   tickrail run --config config/binance.toml --set feed.symbol=ETHUSDT
+#
+# Tick and lot size are looked up from exchangeInfo at start-up.
+# For Binance.US: ws_url = "wss://stream.binance.us:9443", rest_url = "https://api.binance.us"
+
+[feed]
+adapter = "binance"
+symbol = "BTCUSDT"
+
+[execution]
+venue = "paper"
+maker_fee_bps = 0.0       # set to your fee tier; retail spot is 10 bps
+taker_fee_bps = 2.0
+
+[strategy]
+name = "market_maker"
+size = 0.001
+max_inventory = 0.01
+half_spread_ticks = 20
+skew_ticks = 50
+
+[risk]
+max_order_size = 0.002
+max_position = 0.02
+price_band_ticks = 50000
+max_loss = 100.0
+
+[engine]
+wait = "backoff"
+journal = "data/binance-btcusdt.journal"
