@@ -1,0 +1,17 @@
+[package]
+name = "tickrail-sim"
+description = "Price-time priority matching engine and a simulated venue with synthetic order flow"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tickrail-core.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "matching"
+harness = false
