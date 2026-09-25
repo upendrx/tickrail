@@ -1,0 +1,27 @@
+[package]
+name = "tickrail-python"
+description = "Python bindings: order book, journal reader, backtester with Python strategies"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "_tickrail"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
+tickrail-core = { path = "../../crates/core" }
+tickrail-book = { path = "../../crates/book" }
+tickrail-oms = { path = "../../crates/oms" }
+tickrail-risk = { path = "../../crates/risk" }
+tickrail-strategies = { path = "../../crates/strategies" }
+tickrail-journal = { path = "../../crates/journal" }
+tickrail-engine = { path = "../../crates/engine" }
+tickrail-adapters = { path = "../../crates/adapters", default-features = false, features = ["csv"] }
+toml = "1.1"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
