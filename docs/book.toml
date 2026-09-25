@@ -5,5 +5,5 @@ language = "en"
 src = "src"
 
 [output.html]
-git-repository-url = "https://github.com/upendra-eth/tickrail"
-edit-url-template = "https://github.com/upendra-eth/tickrail/edit/main/docs/{path}"
+git-repository-url = "https://github.com/upendrx/tickrail"
+edit-url-template = "https://github.com/upendrx/tickrail/edit/main/docs/{path}"

@@ -36,7 +36,7 @@ So the practical requirements are:
 Install Rust 1.88 or newer from [rustup.rs](https://rustup.rs), then:
 
 ```bash
-git clone https://github.com/upendra-eth/tickrail
+git clone https://github.com/upendrx/tickrail
 cd tickrail
 cargo build --release
 ./target/release/tickrail --version

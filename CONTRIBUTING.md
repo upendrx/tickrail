@@ -9,7 +9,7 @@ You need Rust 1.88 or newer (`rustup update stable`). Python 3.9+ and
 [maturin](https://www.maturin.rs/) are only needed if you touch the bindings.
 
 ```bash
-git clone https://github.com/upendra-eth/tickrail && cd tickrail
+git clone https://github.com/upendrx/tickrail && cd tickrail
 cargo build --release
 cargo test --workspace
 ./target/release/tickrail run          # built-in simulator, console on :8080

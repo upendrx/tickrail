@@ -1,6 +1,6 @@
 # tickrail for Python
 
-Python bindings for the [tickrail](https://github.com/upendra-eth/tickrail) trading
+Python bindings for the [tickrail](https://github.com/upendrx/tickrail) trading
 engine: the same Rust order book, journal reader and backtester the engine
 uses, with Python strategies running inside the Rust event loop.
 
@@ -23,5 +23,5 @@ result = tickrail.backtest("data/session.journal", "market_maker",
                            max_order_size=0.002, max_position=0.02)
 ```
 
-See the [Python chapter](https://github.com/upendra-eth/tickrail/blob/main/docs/src/python.md)
+See the [Python chapter](https://github.com/upendrx/tickrail/blob/main/docs/src/python.md)
 of the developer guide for the full API and writing strategies in Python.

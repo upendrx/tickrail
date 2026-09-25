@@ -8,8 +8,8 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.88"
-repository = "https://github.com/upendra-eth/tickrail"
-homepage = "https://github.com/upendra-eth/tickrail"
+repository = "https://github.com/upendrx/tickrail"
+homepage = "https://github.com/upendrx/tickrail"
 keywords = ["trading", "hft", "order-book", "market-data", "low-latency"]
 categories = ["finance", "concurrency"]
 

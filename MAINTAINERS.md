@@ -2,7 +2,7 @@
 
 | Name | GitHub | Areas |
 |---|---|---|
-| Upendra Singh | [@upendra-eth](https://github.com/upendra-eth) | everything, for now |
+| Upendra Singh | [@upendrx](https://github.com/upendrx) | everything, for now |
 
 For conduct reports or security issues, use GitHub's private vulnerability
 reporting on this repository, or contact a maintainer through their GitHub profile.

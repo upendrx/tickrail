@@ -1,6 +1,6 @@
 # tickrail
 
-[![CI](https://github.com/upendra-eth/tickrail/actions/workflows/ci.yml/badge.svg)](https://github.com/upendra-eth/tickrail/actions/workflows/ci.yml)
+[![CI](https://github.com/upendrx/tickrail/actions/workflows/ci.yml/badge.svg)](https://github.com/upendrx/tickrail/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
 A low-latency trading engine in Rust, built the way electronic market makers
