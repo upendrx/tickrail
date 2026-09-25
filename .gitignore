@@ -1,0 +1,35 @@
+# Build output
+/target
+bindings/python/target
+*.whl
+
+# Local data: journals, exports, captures
+/data
+*.journal
+*.hftj
+research/out
+
+# Python
+.venv
+**/.venv
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+bindings/python/python/tickrail/*.so
+bindings/python/python/tickrail/*.pyd
+
+# Private notes and drafts, never published
+/internal
+/notes
+
+# Editor and tool state
+.DS_Store
+.idea/
+.vscode/
+*.swp
+.env
+.env.*
+
+# Built docs
+docs/book

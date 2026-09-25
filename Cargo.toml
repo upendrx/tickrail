@@ -1,0 +1,51 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "apps/cli"]
+exclude = ["bindings/python"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.88"
+repository = "https://github.com/upendra-eth/tickrail"
+homepage = "https://github.com/upendra-eth/tickrail"
+keywords = ["trading", "hft", "order-book", "market-data", "low-latency"]
+categories = ["finance", "concurrency"]
+
+[workspace.dependencies]
+tickrail-core = { path = "crates/core" }
+tickrail-book = { path = "crates/book" }
+tickrail-sim = { path = "crates/sim" }
+tickrail-oms = { path = "crates/oms" }
+tickrail-risk = { path = "crates/risk" }
+tickrail-strategies = { path = "crates/strategies" }
+tickrail-journal = { path = "crates/journal" }
+tickrail-engine = { path = "crates/engine" }
+tickrail-adapters = { path = "crates/adapters", default-features = false }
+tickrail-telemetry = { path = "crates/telemetry" }
+
+anyhow = "1"
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+toml = "1.1"
+clap = { version = "4.6", features = ["derive"] }
+hdrhistogram = { version = "7.5", default-features = false }
+tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "macros", "net", "time", "sync", "signal"] }
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-webpki-roots"] }
+ureq = { version = "3.4", default-features = false, features = ["rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+axum = { version = "0.8", features = ["ws"] }
+criterion = "0.8"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+debug = "line-tables-only"   # symbols for perf / Instruments / samply at no runtime cost
+
+[profile.bench]
+inherits = "release"
