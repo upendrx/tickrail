@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How the Engine Works</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c4501b'/%3E%3Cpath d='M6 21l6-7 5 4 9-10' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f5f2; --surface: #ffffff; --surface2: #f0f2ee; --ink: #151c24; --muted: #56616d; --faint: #8a949e;
+  --line: #dbdfd8; --accent: #2b59c3; --accent-soft: rgba(43,89,195,.09); --brand: #c4501b; --brand-soft: rgba(196,80,27,.09);
+  --bid: #0e8a5f; --ask: #d1434b; --bid-soft: rgba(14,138,95,.12); --ask-soft: rgba(209,67,75,.12);
+  --warn: #a86c12; --warn-soft: rgba(183,121,31,.12); --py: #2f6fb6; --hdl: #148a78;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0c1117; --surface: #131a22; --surface2: #19222c; --ink: #e5eaef; --muted: #97a3af; --faint: #6c7884;
+    --line: #26313d; --accent: #7aa2ff; --accent-soft: rgba(122,162,255,.12); --brand: #f07a45; --brand-soft: rgba(240,122,69,.12);
+    --bid: #36d399; --ask: #ff6b75; --bid-soft: rgba(54,211,153,.13); --ask-soft: rgba(255,107,117,.13);
+    --warn: #f5b83d; --warn-soft: rgba(245,184,61,.13); --py: #6fa8e8; --hdl: #3fbfa8;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c1117; --surface: #131a22; --surface2: #19222c; --ink: #e5eaef; --muted: #97a3af; --faint: #6c7884;
+  --line: #26313d; --accent: #7aa2ff; --accent-soft: rgba(122,162,255,.12); --brand: #f07a45; --brand-soft: rgba(240,122,69,.12);
+  --bid: #36d399; --ask: #ff6b75; --bid-soft: rgba(54,211,153,.13); --ask-soft: rgba(255,107,117,.13);
+  --warn: #f5b83d; --warn-soft: rgba(245,184,61,.13); --py: #6fa8e8; --hdl: #3fbfa8;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.65 var(--body); padding-inline: 20px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.topbar { position: sticky; top: 0; z-index: 10; margin-inline: -20px; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.topbar .brand { font: 700 16px var(--display); font-stretch: 88%; display: flex; align-items: center; gap: 9px; }
+.topbar .logo { width: 24px; height: 24px; border-radius: 6px; background: var(--brand); display: grid; place-items: center; }
+.topbar .sp { flex: 1; }
+.btn { font: 500 13px var(--body); color: var(--ink); border: 1px solid var(--line); background: var(--surface2); border-radius: 8px; padding: 6px 12px; cursor: pointer; text-decoration: none; }
+.btn:hover { border-color: var(--accent); }
+.btn.on { border-color: var(--brand); color: var(--brand); }
+.live { font: 500 12px var(--mono); color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); display: inline-block; }
+.live.ok i { background: var(--bid); box-shadow: 0 0 0 3px var(--bid-soft); }
+
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; max-width: 1180px; margin: 0 auto; padding-block: 36px 100px; }
+@media (max-width: 960px) { .layout { grid-template-columns: 1fr; } nav.toc { display: none; } }
+nav.toc { position: sticky; top: 72px; align-self: start; font-size: 13.5px; }
+nav.toc .h { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 0 0 8px; }
+nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 4px 0 4px 12px; border-left: 2px solid var(--line); }
+nav.toc a.sub { padding-left: 24px; font-size: 13px; }
+nav.toc a:hover { color: var(--ink); }
+nav.toc a.cur { color: var(--ink); border-left-color: var(--brand); }
+
+article { min-width: 0; }
+h1 { font: 800 clamp(34px, 5vw, 50px)/1.08 var(--display); font-stretch: 82%; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+.lede { font-size: 19px; color: var(--muted); max-width: 64ch; margin: 16px 0 0; }
+h2 { font: 700 30px/1.15 var(--display); font-stretch: 86%; margin: 0 0 10px; text-wrap: balance; }
+h3 { font: 650 19px/1.25 var(--display); font-stretch: 92%; margin: 34px 0 8px; text-wrap: balance; }
+.part { padding-top: 64px; margin-top: 64px; border-top: 1px solid var(--line); }
+.part > .eyebrow, .eyebrow { font: 600 12px var(--mono); letter-spacing: .09em; text-transform: uppercase; color: var(--brand); margin-bottom: 8px; }
+p { margin: 0 0 14px; max-width: 70ch; }
+ul, ol { max-width: 68ch; padding-left: 22px; margin: 0 0 14px; } li { margin: 4px 0; }
+code, .m { font-family: var(--mono); font-size: .88em; }
+code { background: var(--surface2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.v { font-family: var(--mono); font-weight: 600; font-size: .92em; font-variant-numeric: tabular-nums; background: var(--brand-soft); color: var(--ink); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+.up { color: var(--bid); } .down { color: var(--ask); }
+
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin: 18px 0; }
+.box.calc { border-left: 3px solid var(--brand); }
+.box .t { font: 600 12px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: flex; gap: 8px; align-items: center; }
+.formula { font: 500 15px/1.9 var(--mono); overflow-wrap: anywhere; padding: 4px 0; }
+.formula .lhs { color: var(--brand); font-weight: 600; }
+.formula .dim { color: var(--muted); }
+.why { font-size: 15px; color: var(--ink); margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.why b { color: var(--brand); font-weight: 600; }
+.raw { font: 12.5px/1.55 var(--mono); background: var(--surface2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre; margin: 6px 0 0; min-height: 44px; }
+.raw .k { color: var(--accent); } .raw .s { color: var(--bid); }
+.streams { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.box, .card { min-width: 0; }
+.stream-h { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.stream-h b { font-family: var(--mono); font-size: 13px; }
+.stream-h span { color: var(--muted); font-size: 13px; font-family: var(--mono); }
+
+.tw { overflow-x: auto; margin: 16px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); background: var(--surface2); padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gap { display: inline-block; font: 600 10.5px var(--mono); padding: 2px 7px; border-radius: 4px; white-space: nowrap; text-transform: uppercase; letter-spacing: .04em; }
+.gap.same { background: var(--bid-soft); color: var(--bid); }
+.gap.close { background: var(--accent-soft); color: var(--accent); }
+.gap.far { background: var(--warn-soft); color: var(--warn); }
+.gap.huge { background: var(--ask-soft); color: var(--ask); }
+.check { display: grid; grid-template-columns: 22px 1fr auto; gap: 4px 10px; align-items: baseline; font-size: 14.5px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.check:last-child { border-bottom: none; }
+.check .ic { font-weight: 700; }
+.check .num { font-family: var(--mono); font-size: 13px; color: var(--muted); text-align: right; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 18px 0; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+.step .n { font: 700 12px var(--mono); color: var(--brand); }
+.step b { display: block; font-family: var(--display); font-size: 15px; margin: 2px 0 4px; }
+.step span { color: var(--muted); font-size: 13px; }
+.pnlgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 12px 0; }
+.pnlgrid div { background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.pnlgrid .l { font-size: 12.5px; color: var(--muted); }
+.pnlgrid .x { font: 600 18px var(--mono); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.pnlgrid .h { font-size: 12px; color: var(--faint); }
+figure { margin: 18px 0; }
+figure .canvas { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; }
+figure svg { display: block; width: 100%; height: auto; min-width: 700px; color: var(--ink); }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; max-width: 80ch; }
+.callout { border-left: 3px solid var(--warn); background: var(--warn-soft); border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 18px 0; font-size: 15px; max-width: 74ch; }
+.callout.good { border-left-color: var(--bid); background: var(--bid-soft); }
+.twocol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .twocol { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 14.5px; }
+.card h4 { font: 650 15px var(--display); margin: 0 0 6px; }
+.card ul { margin: 0; padding-left: 18px; } .card p { margin: 0 0 6px; }
+.phase { font: 700 11px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--brand); }
+.muted { color: var(--muted); }
+.small { font-size: 13.5px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; scroll-padding-top: 70px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span class="logo"><svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 23l7-8 6 5 11-13" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>How the Engine Works</div>
+  <span class="live" id="st-engine"><i></i>engine</span>
+  <span class="live" id="st-venue"><i></i><span data-f="venue">venue</span> feed</span>
+  <span class="sp"></span>
+  <button class="btn" id="freeze" title="Stop the numbers changing so you can read them">Pause live numbers</button>
+  <button class="btn" id="theme">Theme: system</button>
+  <a class="btn" href="/">← Back to console</a>
+</div>
+
+<div class="layout">
+  <nav class="toc" aria-label="Contents">
+    <div class="h">Contents</div>
+    <a href="#big-picture">The big picture</a>
+    <a href="#p1">1 · What the venue sends us</a>
+    <a href="#p2">2 · Building the order book</a>
+    <a href="#p3">3 · The calculations</a>
+    <a class="sub" href="#c-mid">Mid price</a>
+    <a class="sub" href="#c-micro">Microprice</a>
+    <a class="sub" href="#c-vol">Volatility</a>
+    <a class="sub" href="#c-inv">Inventory skew</a>
+    <a class="sub" href="#c-quote">Our quotes</a>
+    <a href="#p4">4 · Risk checks</a>
+    <a href="#p5">5 · Fills (simulated)</a>
+    <a href="#p6">6 · Profit and loss</a>
+    <a href="#compare">How close to a real HFT firm?</a>
+    <a href="#stack">The tech stack, and why</a>
+    <a href="#arch">Architecture</a>
+    <a href="#scale">How we scale it</a>
+  </nav>
+
+  <article>
+    <header id="big-picture">
+      <div class="eyebrow">Guide · live walkthrough</div>
+      <h1>What this engine does, step by step</h1>
+      <p class="lede">Every number in the orange boxes below is taken <b>live</b> from the running engine, so you can follow each calculation with real data. If they change too fast to read, press <i>Pause live numbers</i> at the top.</p>
+
+      <h3>The one-paragraph version</h3>
+      <p>A <b>feed adapter</b> connects to a market-data source, here <span class="v" data-f="venue">—</span> for <span class="v" data-f="symbol">—</span>. Adapters exist for crypto exchanges, US equities and CSV files, and all of them produce the same normalised messages. Every time the price or order book changes, the venue sends a small message. Our Rust engine turns each message into an up-to-date <b>order book</b>, works out what the price "really" is right now, and keeps one <b>buy order</b> just below that price and one <b>sell order</b> just above it. This is called <b>market making</b>. If both orders fill, we earn the gap between them. If the price moves through one of them, we lose. Before any order goes out, <b>risk checks</b> make sure we can't take a position that's too big. Orders are <b>not sent to the venue</b>. A simulator decides whether they would have filled, and we track the profit and loss as if they had.</p>
+
+      <div class="steps">
+        <div class="step"><div class="n">STEP 1</div><b>Receive</b><span>The venue pushes prices, book levels and trades.</span></div>
+        <div class="step"><div class="n">STEP 2</div><b>Rebuild the book</b><span>Keep the best 20 bids and asks up to date.</span></div>
+        <div class="step"><div class="n">STEP 3</div><b>Calculate</b><span>Fair price, volatility, inventory skew, target quotes.</span></div>
+        <div class="step"><div class="n">STEP 4</div><b>Check risk</b><span>Size, position, price band, rate, kill switch.</span></div>
+        <div class="step"><div class="n">STEP 5</div><b>Fill (simulated)</b><span>Did the market trade through our price?</span></div>
+        <div class="step"><div class="n">STEP 6</div><b>Account</b><span>Position, cash, fees, and profit/loss.</span></div>
+      </div>
+      <p class="small">Steps 2 to 6 run on one CPU thread and take about <span class="v" data-f="t2o">—</span> in total (median). The trip from the venue's servers to this machine takes about <span class="v" data-f="netdelay">—</span>, which is thousands of times longer. That gap comes up again in the section on real HFT firms.</p>
+    </header>
+
+    <!-- ============ PART 1 ============ -->
+    <section class="part" id="p1">
+      <div class="eyebrow">Step 1</div>
+      <h2>What the venue sends us</h2>
+      <p>The engine is currently reading <span class="v" data-f="venue">—</span> (<span class="m" data-f="source">—</span>). Network adapters open a WebSocket, a connection that stays open so the server can push messages, and subscribe to these streams:</p>
+      <div class="box"><div class="t">Subscribed streams</div><div class="tw" style="margin:0;border:none"><table id="streams"><tbody><tr><td class="muted">waiting…</td></tr></tbody></table></div></div>
+      <p>Below are the latest raw frames the feed thread received, one per message type, exactly as the venue sent them. The adapter samples them a few times a second; the engine processes every one.</p>
+      <div class="streams" id="raw-frames"><div class="box"><pre class="raw">waiting… (in simulator mode there is no network feed; the matching engine produces normalised messages directly)</pre></div></div>
+
+      <h3>First calculation: turning text into integers</h3>
+      <p>Venues send prices as decimal text or JSON numbers, e.g. <code>"83458.01000000"</code>. The adapter converts each one into a whole number of <b>ticks</b> (the smallest price step; for <span data-f="symbol" class="m">—</span> one tick is <span class="v" data-f="tick">—</span>) and each size into a whole number of <b>lots</b>.</p>
+      <div class="box calc">
+        <div class="t">Live example from the current best bid</div>
+        <div class="formula" id="f-parse">waiting for data…</div>
+        <div class="why"><b>Why?</b> Floating point can't store decimals like 0.1 exactly, so 0.1 + 0.2 ≠ 0.3. On an exchange that means wrong prices, rejected orders and PnL that drifts. Whole numbers are exact and faster to compare. The parser reads the digits directly instead of going through a float, and rejects any price that isn't on the tick grid.</div>
+      </div>
+      <p class="small">Tick and lot sizes are fetched from the venue's public REST API at start-up (for the CSV adapter they're set in the config), so the same code handles BTC at 0.01 ticks, a penny stock or a futures contract.</p>
+    </section>
+
+    <!-- ============ PART 2 ============ -->
+    <section class="part" id="p2">
+      <div class="eyebrow">Step 2</div>
+      <h2>Building the order book</h2>
+      <p>The <b>order book</b> is the list of everyone waiting to trade. <span style="color:var(--bid)"><b>Bids</b></span> are buyers, each saying "I'll buy up to this size at this price". <span style="color:var(--ask)"><b>Asks</b></span> are sellers. The highest bid and the lowest ask are the <b>top of book</b>, and the gap between them is the <b>spread</b>.</p>
+      <div class="twocol">
+        <div class="box">
+          <div class="t">Live: top 5 levels in the engine</div>
+          <div class="tw" style="margin:0;border:none"><table id="book5"><tbody><tr><td class="muted">waiting…</td></tr></tbody></table></div>
+        </div>
+        <div class="box">
+          <div class="t">How the engine keeps it up to date</div>
+          <ul style="font-size:14.5px;margin:0">
+            <li>A <b>depth snapshot</b> replaces the whole book (clear, then insert 40 levels).</li>
+            <li>Between snapshots, each <b>bookTicker</b> updates the best level and removes any level it proves stale. If the best bid falls from 100 to 99, level 100 must be gone.</li>
+            <li>Each side is a small array sorted so the best price is <i>last</i>. Most changes happen near the top, so an update touches only the end of the array: about <b>10 nanoseconds</b>.</li>
+            <li>The strategy only looks at the book when a message batch is complete, so it never sees a half-updated book.</li>
+          </ul>
+        </div>
+      </div>
+      <p>Right now the spread is <span class="v" data-f="spread">—</span>. For BTCUSDT it's usually a single tick (one cent) because the market is so competitive. That tells you professional market makers are already quoting at the tightest possible prices.</p>
+    </section>
+
+    <!-- ============ PART 3 ============ -->
+    <section class="part" id="p3">
+      <div class="eyebrow">Step 3</div>
+      <h2>The calculations, and why each one exists</h2>
+      <p>The strategy is a <b>market maker</b> based on a well-known academic model (Avellaneda &amp; Stoikov, 2008). It has one job: decide where to place its buy order and its sell order. Each calculation below feeds the next. The numbers are the engine's own values from its most recent decision. Prices inside formulas are in <b>ticks</b>; divide by 100 to get dollars.</p>
+
+      <div class="box calc" id="c-mid">
+        <div class="t">3a · Mid price</div>
+        <div class="formula" id="f-mid">—</div>
+        <div class="why"><b>Why?</b> The simplest estimate of "the price": halfway between the best buyer and the best seller. It's a starting point, but it ignores how much size sits on each side.</div>
+      </div>
+
+      <div class="box calc" id="c-micro">
+        <div class="t">3b · Microprice (our fair value)</div>
+        <div class="formula" id="f-micro">—</div>
+        <div class="why"><b>Why?</b> If there's a lot waiting to buy and very little waiting to sell, the ask is likely to be taken out and the price will tick up. The microprice weights each side by the <i>other</i> side's size, so it leans toward the thin side, where the price is about to move. It's a better short-term predictor than the mid, and it's what the strategy treats as the true price.</div>
+      </div>
+
+      <div class="box calc" id="c-vol">
+        <div class="t">3c · Volatility (how jumpy the market is)</div>
+        <div class="formula" id="f-vol">—</div>
+        <div class="why"><b>Why?</b> When the price is moving fast, a resting order is more likely to be run over before we can move it. We measure recent volatility as an exponentially weighted average of squared mid changes: recent moves count most, and old ones fade out. The quotes then widen automatically when the market gets fast.</div>
+      </div>
+
+      <div class="box calc" id="c-inv">
+        <div class="t">3d · Inventory skew (reservation price)</div>
+        <div class="formula" id="f-inv">—</div>
+        <div class="why"><b>Why?</b> A market maker wants to <i>earn the spread</i>, not bet on direction. If we've bought a lot (long), we move both quotes down: our sell becomes more attractive and our buy less so, which pushes us back toward flat. The price we centre on after this shift is the <b>reservation price</b>.</div>
+      </div>
+
+      <div class="box calc" id="c-quote">
+        <div class="t">3e · Our target quotes</div>
+        <div class="formula" id="f-quote">—</div>
+        <div class="why"><b>Why?</b> We quote half the spread below and above the reservation price. The <i>half-spread</i> is a minimum distance plus a volatility term. Quotes are always kept on the passive side (never crossing the spread) and sent as <b>post-only</b>, so we're always the maker and never pay the spread.</div>
+      </div>
+
+      <h3>When the strategy changes its orders</h3>
+      <p>Cancelling and re-placing costs us: we lose our place in the queue at that price, and exchanges limit order rates. So the strategy only replaces an order when its target has moved by at least <span class="v" data-f="p:requote threshold">2 ticks</span>, and never more often than once every <span class="v" data-f="p:min requote interval">10 ms</span> per side. So far it has sent <span class="v" data-f="orders">—</span> orders and <span class="v" data-f="cancels">—</span> cancels.</p>
+    </section>
+
+    <!-- ============ PART 4 ============ -->
+    <section class="part" id="p4">
+      <div class="eyebrow">Step 4</div>
+      <h2>Risk checks before any order leaves</h2>
+      <p>Every new order passes these checks on the same thread, in a fraction of a microsecond. Real firms are legally required to run them (SEC Rule 15c3-5 in the US, MiFID II RTS 6 in Europe). Here are the checks applied to the target bid right now:</p>
+      <div class="box" id="risk-live">waiting…</div>
+      <p>Two rules matter more than any single limit. First, <b>cancels are never blocked</b>, because blocking a cancel could trap you in a bad position. Second, the <b>kill switch</b> (on the console's Risk tab) cancels everything at once. It also trips automatically if losses exceed the limit.</p>
+    </section>
+
+    <!-- ============ PART 5 ============ -->
+    <section class="part" id="p5">
+      <div class="eyebrow">Step 5</div>
+      <h2>Fills: how we decide an order "would have" traded</h2>
+      <p>In paper mode no orders leave the process. A <b>paper venue</b> inside the engine decides fills from the real trades the feed reports. The rule is deliberately pessimistic:</p>
+      <ul>
+        <li>Our resting buy at price P fills only when a real trade prints <b>below</b> P. A trade exactly at P doesn't count, because we can't know if we were first in the queue.</li>
+        <li>It also fills if the best ask drops to P or lower, meaning the market moved through our price.</li>
+        <li>The fill size is at most the size of the real trade that went through us.</li>
+      </ul>
+      <div class="callout">This makes paper results <b>more pessimistic</b> than reality in one way (we get no fills at our exact price) and <b>more optimistic</b> in another (we assume zero delay between deciding and our order being in the book, and we ignore the market impact our orders would have had). Treat paper PnL as a lower-fidelity estimate; only real fills settle the question.</div>
+      <p>So far: <span class="v" data-f="fills">—</span> fills, all as maker (our order was resting and someone traded into it).</p>
+    </section>
+
+    <!-- ============ PART 6 ============ -->
+    <section class="part" id="p6">
+      <div class="eyebrow">Step 6</div>
+      <h2>Profit and loss: what the number means</h2>
+      <p>Every fill changes two things: our <b>position</b> (how much BTC we hold, positive = long) and our <b>cash</b> (spent on buys, received from sells). PnL values whatever we hold at the current mid price:</p>
+      <div class="box calc">
+        <div class="t">Live PnL breakdown</div>
+        <div class="pnlgrid" id="pnl-grid"></div>
+        <div class="formula" id="f-pnl">—</div>
+        <div class="why"><b>Why "marked at mid"?</b> If we hold 0.001 BTC, it's worth whatever BTC is worth <i>now</i>, so PnL moves every tick even with no trading. This is standard mark-to-market accounting, and it stops a losing position from being hidden.</div>
+      </div>
+
+      <h3>Where profit comes from, and where it goes</h3>
+      <div class="twocol">
+        <div class="card"><h4 class="up">Earned: the spread</h4><p>Every time we buy on our bid and later sell on our ask, we earn the gap: here about <span class="v" data-f="gapusd">—</span> per BTC, so about <span class="v" data-f="gapper">—</span> on our order size.</p></div>
+        <div class="card"><h4 class="down">Lost: adverse selection</h4><p>We tend to get filled right before the price moves against us, because traders with better information pick off stale quotes. It's measured by <b>markout</b>: the mid's move since each fill, in our favour. Recent average: <span class="v" data-f="markout">—</span>.</p></div>
+      </div>
+      <p>For market making to be profitable, spread earned plus rebates must exceed adverse selection plus fees. At a typical retail crypto fee of <b>0.1% per trade</b>, a round trip on BTC costs about $170 per coin, far more than the cents of spread available. That's why this dashboard assumes an institutional fee tier (maker 0%, taker 0.02%). Real crypto market makers get zero or negative maker fees (rebates) through volume tiers and special programmes.</p>
+      <div class="callout"><b>Why the PnL here is tiny and usually slightly negative:</b> we trade only <span data-f="p:order size" class="m">0.001 BTC</span> (about <span class="v" data-f="notional">—</span>) per order, over the public internet, tens of milliseconds from the exchange, with a textbook strategy. A small negative number is the realistic result. The value of this platform is that it measures exactly <i>why</i> the strategy loses (the markouts), which is the first thing a real desk does.</div>
+    </section>
+
+    <!-- ============ COMPARE ============ -->
+    <section class="part" id="compare">
+      <div class="eyebrow">Reality check</div>
+      <h2>How close is this to a real HFT firm?</h2>
+      <p>On <b>software architecture</b>, close: the same patterns real firms use, and a hot path that runs in microseconds. On <b>everything that makes money</b>, far: network position, exchange access, fees, strategy research and capital. Here it is component by component:</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Component</th><th>This platform</th><th>A top HFT firm</th><th>Gap</th></tr></thead>
+          <tbody>
+            <tr><td><b>Engine design</b></td><td>Single-writer thread, lock-free rings, integer prices, zero allocation, deterministic replay</td><td>The same principles (LMAX/Aeron style), plus years of tuning</td><td><span class="gap same">same idea</span></td></tr>
+            <tr><td><b>Software reaction time</b></td><td><span class="v" data-f="t2o">—</span> median on commodity hardware</td><td>~1–5 µs in software on tuned Linux; 10–100 ns on FPGA</td><td><span class="gap close">close in software</span></td></tr>
+            <tr><td><b>Distance to the exchange</b></td><td><span class="v" data-f="netdelay">—</span> over the internet</td><td>Colocated in the same data centre: a few µs of cable. For cloud-hosted crypto venues, firms run in the same cloud region at &lt;1 ms.</td><td><span class="gap huge">~10,000× slower</span></td></tr>
+            <tr><td><b>Market data</b></td><td>Public WebSocket JSON, top 20 levels every 100 ms, plus best bid/ask</td><td>Raw binary exchange feeds (ITCH, MDP3), every order, hardware-timestamped, via kernel bypass or FPGA</td><td><span class="gap far">far</span></td></tr>
+            <tr><td><b>Fills</b></td><td>Simulated, pessimistic, no queue position</td><td>Real fills, with queue position models tracked per order</td><td><span class="gap far">far</span></td></tr>
+            <tr><td><b>Strategy</b></td><td>Textbook Avellaneda–Stoikov, two signals (microprice, volatility)</td><td>Hundreds of proprietary signals, ML models trained on GPU clusters (XTX: 25,000+ GPUs), cross-market information</td><td><span class="gap huge">the real moat</span></td></tr>
+            <tr><td><b>Fees</b></td><td>Assumed institutional tier</td><td>Top-tier rebates, often <i>paid</i> to provide liquidity</td><td><span class="gap far">far</span></td></tr>
+            <tr><td><b>Risk</b></td><td>Pre-trade limits, kill switch, max loss</td><td>The same checks, plus firm-wide real-time risk across thousands of instruments</td><td><span class="gap close">close in concept</span></td></tr>
+            <tr><td><b>Scale</b></td><td>1 symbol per engine thread</td><td>Thousands of instruments, dozens of exchanges, own data centres; Jane Street made $39.6B in 2025</td><td><span class="gap huge">huge</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout good"><b>What this means for you:</b> the software foundation is the right kind: the architecture a funded team would build on, not a toy. The next gains don't come from faster code. They come from (1) moving the engine next to the exchange, (2) real order entry, (3) better signals and strategy research, and (4) fee tiers. That's what the scaling plan below covers.</div>
+    </section>
+
+    <!-- ============ STACK ============ -->
+    <section class="part" id="stack">
+      <div class="eyebrow">Technology</div>
+      <h2>The tech stack, and why each piece</h2>
+      <p>The rule: <b>anything on the path from market data to an order is Rust.</b> Everything else uses whichever tool fits the job best.</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Piece</th><th>What we use</th><th>Why this and not something else</th></tr></thead>
+          <tbody>
+            <tr><td><b>Trading engine</b> (book, strategy, risk, orders)</td><td>Rust</td><td>As fast as C++, with no garbage-collection pauses (unlike Java, Go, Python), and the compiler prevents memory corruption and data races. In trading, a memory bug loses money rather than just crashing.</td></tr>
+            <tr><td><b>Thread communication</b></td><td>Our own lock-free ring buffers</td><td>Locks make threads wait on each other. A ring hands a message across CPU cores in about 8 ns, with no waiting and no memory allocation. Same idea as the LMAX Disruptor and Aeron used in finance.</td></tr>
+            <tr><td><b>Venue connections</b></td><td>tokio + tungstenite (WebSocket) + rustls (TLS)</td><td>Networking is slow (milliseconds), so it runs on its own thread. The async runtime handles reconnects and timeouts without touching the engine thread.</td></tr>
+            <tr><td><b>Message parsing</b></td><td>serde_json (zero-copy) + our exact decimal parser</td><td>Reads fields directly from the received bytes without copying, and converts prices to integers exactly.</td></tr>
+            <tr><td><b>Order matching simulator</b></td><td>Rust</td><td>A real price-time-priority exchange, for testing offline at about 86 ns per operation.</td></tr>
+            <tr><td><b>Recording (journal)</b></td><td>Fixed 48-byte binary records</td><td>Records every event so any session can be replayed exactly: 14 million events per second, much faster than CSV or JSON.</td></tr>
+            <tr><td><b>Latency measurement</b></td><td>HDR histograms</td><td>Captures the full distribution (p50, p99, p99.9), not just averages, which hide the slow moments.</td></tr>
+            <tr><td><b>Web server and live feed to this page</b></td><td>axum + WebSocket, 10 updates/s</td><td>Runs on low-priority threads. The engine only drops a snapshot into a ring every 100 ms and never waits for the browser.</td></tr>
+            <tr><td><b>Console and this guide</b></td><td>Plain HTML, CSS and JavaScript</td><td>No build step; served straight from the engine binary. Would move to TypeScript + React as it grows.</td></tr>
+            <tr><td><b>Research and analysis</b></td><td>Python + Polars</td><td>Researchers everywhere use Python. Polars has a Rust engine underneath, so analysis of millions of rows stays fast.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small">Where Rust isn't used, and why: notebooks and research (Python's ecosystem is unbeatable), user interfaces (the web is the right tool), and later FPGA hardware logic (that needs hardware languages such as SystemVerilog).</p>
+    </section>
+
+    <!-- ============ ARCH ============ -->
+    <section class="part" id="arch">
+      <div class="eyebrow">Architecture</div>
+      <h2>How the pieces fit together</h2>
+      <p>The program runs several threads at once, each with one job. Only the <b>engine thread</b> is allowed to change trading state. The others hand it messages through ring buffers, so nothing ever has to lock or wait.</p>
+      <figure>
+        <div class="canvas">
+          <svg viewBox="0 0 980 420" role="img" aria-label="Venue servers send market-data streams over the internet to the feed thread, which parses them and passes messages through a ring to the engine thread. The engine thread runs book, strategy, risk, OMS and paper venue in order. It sends records to the journal thread and snapshots to the telemetry thread, which serves this page. The browser also connects to Binance directly for the markets tab.">
+            <defs>
+              <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+            </defs>
+            <g font-family="IBM Plex Sans, sans-serif" fill="currentColor" font-size="12">
+              <rect x="16" y="40" width="150" height="120" rx="8" fill="none" stroke="currentColor" stroke-opacity=".55"/>
+              <text x="30" y="66" font-weight="600" font-size="13">Venue servers</text>
+              <text x="30" y="86" font-size="11" fill-opacity=".7">exchange or broker</text>
+              <text x="30" y="110" font-family="IBM Plex Mono, monospace" font-size="10.5">book snapshots</text>
+              <text x="30" y="126" font-family="IBM Plex Mono, monospace" font-size="10.5">best bid / ask</text>
+              <text x="30" y="142" font-family="IBM Plex Mono, monospace" font-size="10.5">trades</text>
+
+              <line x1="166" y1="100" x2="222" y2="100" stroke="currentColor" stroke-width="1.5" marker-end="url(#a)"/>
+              <text x="170" y="92" font-size="10.5" fill-opacity=".75">internet</text>
+              <text x="170" y="118" font-size="10.5" fill-opacity=".75">~20–40 ms</text>
+
+              <rect x="224" y="40" width="170" height="120" rx="8" fill="none" stroke="currentColor" stroke-opacity=".55"/>
+              <text x="238" y="66" font-weight="600" font-size="13">Feed thread</text>
+              <text x="238" y="86" font-size="11" fill-opacity=".7">TLS + WebSocket</text>
+              <text x="238" y="104" font-size="11" fill-opacity=".7">parse JSON (zero-copy)</text>
+              <text x="238" y="122" font-size="11" fill-opacity=".7">text → integer ticks</text>
+              <text x="238" y="146" font-family="IBM Plex Mono, monospace" font-size="10" fill-opacity=".6">auto-reconnect</text>
+
+              <line x1="394" y1="100" x2="446" y2="100" stroke="currentColor" stroke-width="1.5" marker-end="url(#a)"/>
+              <text x="398" y="92" font-family="IBM Plex Mono, monospace" font-size="10">ring</text>
+              <text x="398" y="118" font-family="IBM Plex Mono, monospace" font-size="10">~8 ns</text>
+
+              <rect x="448" y="24" width="516" height="152" rx="8" style="fill: var(--brand); stroke: var(--brand)" fill-opacity=".07" stroke-width="2"/>
+              <text x="464" y="48" font-weight="600" font-size="13">Engine thread: the only one that changes trading state</text>
+              <text x="464" y="65" font-family="IBM Plex Mono, monospace" font-size="10" fill-opacity=".6">busy-polls, never sleeps · ~2 µs per decision</text>
+              <g text-anchor="middle">
+                <rect x="464" y="84" width="84" height="54" rx="6" fill="none" stroke="currentColor" stroke-opacity=".55"/><text x="506" y="106">order book</text><text x="506" y="123" font-size="10" fill-opacity=".6">step 2</text>
+                <rect x="564" y="84" width="84" height="54" rx="6" fill="none" stroke="currentColor" stroke-opacity=".55"/><text x="606" y="106">strategy</text><text x="606" y="123" font-size="10" fill-opacity=".6">step 3</text>
+                <rect x="664" y="84" width="84" height="54" rx="6" fill="none" stroke="currentColor" stroke-opacity=".55"/><text x="706" y="106">risk</text><text x="706" y="123" font-size="10" fill-opacity=".6">step 4</text>
+                <rect x="764" y="84" width="84" height="54" rx="6" fill="none" stroke="currentColor" stroke-opacity=".55"/><text x="806" y="106">paper venue</text><text x="806" y="123" font-size="10" fill-opacity=".6">step 5</text>
+                <rect x="864" y="84" width="84" height="54" rx="6" fill="none" stroke="currentColor" stroke-opacity=".55"/><text x="906" y="106">OMS + PnL</text><text x="906" y="123" font-size="10" fill-opacity=".6">step 6</text>
+              </g>
+              <g stroke="currentColor" stroke-opacity=".7" marker-end="url(#a)"><line x1="548" y1="111" x2="562" y2="111"/><line x1="648" y1="111" x2="662" y2="111"/><line x1="748" y1="111" x2="762" y2="111"/><line x1="848" y1="111" x2="862" y2="111"/></g>
+              <text x="706" y="162" text-anchor="middle" font-size="11" fill-opacity=".7">fills flow back to the strategy, which adjusts its quotes</text>
+
+              <line x1="600" y1="176" x2="600" y2="262" stroke="currentColor" stroke-width="1.5" marker-end="url(#a)"/>
+              <text x="608" y="224" font-family="IBM Plex Mono, monospace" font-size="10">every event</text>
+              <line x1="820" y1="176" x2="820" y2="262" stroke="currentColor" stroke-width="1.5" marker-end="url(#a)"/>
+              <text x="828" y="216" font-family="IBM Plex Mono, monospace" font-size="10">snapshot</text>
+              <text x="828" y="230" font-family="IBM Plex Mono, monospace" font-size="10">every 100 ms</text>
+
+              <rect x="500" y="264" width="200" height="72" rx="8" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+              <text x="514" y="288" font-weight="600" font-size="13">Journal thread</text>
+              <text x="514" y="306" font-size="11" fill-opacity=".7">writes data/*.journal to disk</text>
+              <text x="514" y="323" font-size="11" fill-opacity=".7">→ replay / Python research</text>
+
+              <rect x="730" y="264" width="234" height="72" rx="8" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+              <text x="744" y="288" font-weight="600" font-size="13">Telemetry threads</text>
+              <text x="744" y="306" font-size="11" fill-opacity=".7">latency histograms, web server</text>
+              <text x="744" y="323" font-size="11" fill-opacity=".7">localhost:8080</text>
+
+              <line x1="847" y1="336" x2="847" y2="366" stroke="currentColor" stroke-width="1.5" marker-end="url(#a)"/>
+              <rect x="224" y="368" width="740" height="40" rx="8" style="fill: var(--accent); stroke: var(--accent)" fill-opacity=".08"/>
+              <text x="240" y="393" font-weight="600" font-size="13">Your browser: console + this guide</text>
+              <text x="560" y="393" font-size="11" fill-opacity=".75">kill switch button → one atomic flag the engine checks</text>
+              <path d="M91 160 L91 388 L222 388" fill="none" stroke="currentColor" stroke-opacity=".5" stroke-dasharray="4 3" marker-end="url(#a)"/>
+              <text x="100" y="300" font-size="10.5" fill-opacity=".7">browser → public API</text>
+              <text x="100" y="314" font-size="10.5" fill-opacity=".7">directly (market</text>
+              <text x="100" y="328" font-size="10.5" fill-opacity=".7">explorer tab)</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>Solid arrows are lock-free ring buffers between threads. The journal, telemetry and browser can be slow, or even crash, without ever slowing the engine: if they fall behind, the engine drops a telemetry snapshot rather than wait.</figcaption>
+      </figure>
+      <p>Two other ways to run the same engine:</p>
+      <ul>
+        <li><b>Simulator</b> (<code>adapter = "simulator"</code>): a built-in exchange replaces the venue, with its own matching engine and simulated traders, some of whom know the "true" price. It works offline, and market making there is realistically hard.</li>
+        <li><b><code>tickrail replay</code></b>: feeds a recorded journal or CSV file back through the strategy with new settings. It runs deterministically at millions of events per second, which is how you test changes before trading them.</li>
+      </ul>
+    </section>
+
+    <!-- ============ SCALE ============ -->
+    <section class="part" id="scale">
+      <div class="eyebrow">Growth</div>
+      <h2>How we scale it</h2>
+      <p>The engine talks to the outside world through one interface, the <code>Venue</code> trait: "send order" and "receive fills". Scaling means replacing what's <i>behind</i> that interface. The strategy, risk and order-management code stays the same at every phase.</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Phase</th><th>What changes</th><th>What it unlocks</th></tr></thead>
+          <tbody>
+            <tr><td><span class="phase">0 · today</span><br>Any machine</td><td>Public data, simulated fills, replay, this console</td><td>Strategy research and development, paper trading</td></tr>
+            <tr><td><span class="phase">1 · first money</span><br>Cloud near the exchange</td><td>Exchange testnet, then small real orders with an API key. Run in the cloud region next to the venue on Linux with pinned CPU cores. Reconcile positions against the exchange. Add alerts.</td><td>Network delay drops from ~25 ms to under 1 ms; real fills; the first honest PnL</td></tr>
+            <tr><td><span class="phase">2 · funded</span><br>More venues</td><td>Add OKX, Bybit, Coinbase adapters behind the same interface. Full-depth order books. Several strategies and symbols in parallel (one engine thread per group). Tick database (ClickHouse/Parquet) and a research cluster.</td><td>Cross-exchange signals: the price on one exchange predicts another. More volume, which means better fee tiers.</td></tr>
+            <tr><td><span class="phase">3 · traditional markets</span><br>Colocation</td><td>Own servers inside exchange data centres (CME, Nasdaq, LSE). Binary exchange protocols. Kernel-bypass network cards. Hardware clock sync (PTP). Regulatory licences and compliance.</td><td>Microsecond-level competition; equities, futures, options</td></tr>
+            <tr><td><span class="phase">4 · hardware</span><br>FPGA</td><td>Chips that react to market data in 10–100 ns for the simplest decisions, with the Rust engine setting their parameters. Leased microwave links between exchanges.</td><td>Competing with the fastest firms on latency-critical strategies</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="twocol">
+        <div class="card"><h4>What's already in place for scaling</h4><ul>
+          <li>One interface for every venue, so new exchanges plug in</li>
+          <li>Ring buffers between threads, which extend to processes and machines with Aeron</li>
+          <li>Linux CPU pinning, already written</li>
+          <li>Deterministic replay for testing every change</li>
+          <li>Binary journal as the audit trail</li>
+        </ul></div>
+        <div class="card"><h4>What must be built before real money</h4><ul>
+          <li>Authenticated order gateway (testnet first)</li>
+          <li>Position reconciliation with the exchange</li>
+          <li>Crash recovery from the journal</li>
+          <li>Alerts on gaps, rejects and losses</li>
+          <li>A strategy with positive markouts in replay over many days</li>
+          <li>Legal review of each exchange's terms and your jurisdiction</li>
+        </ul></div>
+      </div>
+      <p class="small" style="margin-top:24px">The developer docs in <code>docs/</code> cover each component in depth, including how to write your own adapter or strategy.</p>
+    </section>
+  </article>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let snap = null, info = null, frozen = false, lastRender = 0;
+
+/* theme (shared with console) */
+const THEMES = ["system", "light", "dark"]; let theme = "system";
+try { theme = localStorage.getItem("tickrail-theme") || "system"; } catch (e) {}
+function applyTheme() { if (theme === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme; $("theme").textContent = "Theme: " + theme; try { localStorage.setItem("tickrail-theme", theme); } catch (e) {} }
+$("theme").onclick = () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; applyTheme(); };
+applyTheme();
+$("freeze").onclick = () => { frozen = !frozen; $("freeze").textContent = frozen ? "Resume live numbers" : "Pause live numbers"; $("freeze").classList.toggle("on", frozen); };
+
+/* toc highlight */
+const tocLinks = [...document.querySelectorAll("nav.toc a")];
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) tocLinks.forEach(a => a.classList.toggle("cur", a.getAttribute("href") === "#" + e.target.id)); }), { rootMargin: "-40% 0px -55% 0px" });
+document.querySelectorAll("header[id], section[id], .box[id]").forEach(s => io.observe(s));
+
+/* formatting */
+let pd = 2, qd = 5, tick = 0.01, lot = 0.00001;
+const usd = (v, d = 2) => (v < 0 ? "−" : "") + "$" + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const P = t => (t * tick).toLocaleString("en-US", { minimumFractionDigits: pd, maximumFractionDigits: pd });
+const Q = l => (l * lot).toFixed(qd);
+const T = (v, d = 2) => Number(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+function ns(v) { if (!v) return "—"; if (v < 1e3) return v + " ns"; if (v < 1e6) return (v / 1e3).toFixed(v < 1e4 ? 2 : 1) + " µs"; return (v / 1e6).toFixed(1) + " ms"; }
+const L = (lhs, rhs) => `<span class="lhs">${lhs}</span> = ${rhs}`;
+const param = name => { const p = info && info.params.find(x => x[0] === name); return p ? p[1] : "—"; };
+const pnum = name => parseFloat(param(name));
+
+function setF(key, html) { document.querySelectorAll(`[data-f="${key}"]`).forEach(e => e.innerHTML = html); }
+
+/* ---------- engine snapshot → worked examples ---------- */
+function renderEngine() {
+  if (!snap || frozen) return;
+  const s = snap.stats; info = snap.info;
+  pd = info.price_decimals; qd = info.qty_decimals; tick = info.tick_size; lot = info.lot_size;
+  const names = info.strat_fields, g = k => { const i = names.indexOf(k); return i >= 0 ? s.strat[i] : NaN; };
+  const bb = s.bids[0], ba = s.asks[0];
+  const feed = Object.fromEntries(snap.feed || []);
+  setF("symbol", esc(info.symbol)); setF("tick", String(tick)); setF("venue", esc(info.venue)); setF("source", esc(info.source));
+  setF("t2o", ns(snap.tick_to_order.p50));
+  setF("netdelay", feed.venue_to_local_ns ? ns(feed.venue_to_local_ns) : info.mode_key === "sim" ? "0 (simulator)" : "—");
+  setF("orders", s.orders_sent.toLocaleString()); setF("cancels", s.cancels_sent.toLocaleString());
+  setF("fills", s.fills.toLocaleString());
+  ["requote threshold", "min requote interval", "order size"].forEach(n => setF("p:" + n, esc(param(n))));
+  if (!bb || !ba || !bb[1] || !ba[1]) return;
+  const spr = ba[0] - bb[0];
+  setF("spread", `${spr} tick${spr === 1 ? "" : "s"} (${usd(spr * tick)})`);
+
+  // book table
+  const asks = s.asks.filter(l => l[1]).slice(0, 5).reverse(), bids = s.bids.filter(l => l[1]).slice(0, 5);
+  $("book5").innerHTML = `<thead><tr><th>Side</th><th class="n">Price</th><th class="n">Size</th></tr></thead><tbody>` +
+    asks.map((l, i) => `<tr><td class="down">${i === asks.length - 1 ? "best ask" : "ask"}</td><td class="n down">${P(l[0])}</td><td class="n">${Q(l[1])}</td></tr>`).join("") +
+    `<tr><td colspan="3" style="text-align:center;color:var(--muted);font-size:13px">spread ${spr} tick${spr === 1 ? "" : "s"}</td></tr>` +
+    bids.map((l, i) => `<tr><td class="up">${i === 0 ? "best bid" : "bid"}</td><td class="n up">${P(l[0])}</td><td class="n">${Q(l[1])}</td></tr>`).join("") + `</tbody>`;
+
+  // 3a mid
+  const mid = (bb[0] + ba[0]) / 2;
+  $("f-mid").innerHTML = L("mid", `(best bid + best ask) ÷ 2`) + "<br>" +
+    L("mid", `(<span class="up">${bb[0]}</span> + <span class="down">${ba[0]}</span>) ÷ 2 = <b>${T(mid, 1)}</b> ticks <span class="dim">= ${usd(mid * tick, pd)}</span>`);
+  // 3b micro
+  const micro = (bb[0] * ba[1] + ba[0] * bb[1]) / (bb[1] + ba[1]);
+  const lean = micro - mid;
+  $("f-micro").innerHTML = L("microprice", `(bid × askSize + ask × bidSize) ÷ (bidSize + askSize)`) + "<br>" +
+    L("microprice", `(<span class="up">${bb[0]}</span> × ${Q(ba[1])} + <span class="down">${ba[0]}</span> × ${Q(bb[1])}) ÷ (${Q(bb[1])} + ${Q(ba[1])}) = <b>${T(micro, 2)}</b> ticks`) + "<br>" +
+    `<span class="dim">→ ${Math.abs(lean) < 0.01 ? "sizes are balanced, so it sits on the mid" : `leans ${T(Math.abs(lean), 2)} ticks toward the ${lean > 0 ? "ask: buyers outweigh sellers, price more likely to tick UP" : "bid: sellers outweigh buyers, price more likely to tick DOWN"}`}. Engine's own value: ${T(g("microprice"), 2)}</span>`;
+  // 3c vol
+  const sig = g("volatility");
+  $("f-vol").innerHTML = L("variance", `0.995 × previous variance + 0.005 × (change in mid)²`) + "<br>" +
+    L("σ", `√variance = <b>${T(sig, 3)}</b> ticks per update`) + "<br>" +
+    `<span class="dim">→ volatility adds ${param("volatility multiplier")} × ${T(sig, 3)} = ${T(pnum("volatility multiplier") * sig, 2)} ticks to our half-spread</span>`;
+  // 3d inventory
+  const pos = s.position_lots * lot, maxInv = pnum("max inventory"), ratio = g("inventory_ratio"), skew = pnum("inventory skew");
+  const res = g("reservation");
+  $("f-inv").innerHTML = L("inventory ratio", `position ÷ max inventory = ${pos.toFixed(qd)} ÷ ${maxInv} = <b>${T(ratio, 3)}</b>`) + "<br>" +
+    L("reservation", `microprice − ratio × skew = ${T(g("microprice"), 2)} − ${T(ratio, 3)} × ${skew} = <b>${T(res, 2)}</b> ticks`) + "<br>" +
+    `<span class="dim">→ ${Math.abs(ratio) < 0.001 ? "we're flat, so no shift" : ratio > 0 ? `we're long, so quotes shift DOWN ${T(ratio * skew, 2)} ticks to encourage selling` : `we're short, so quotes shift UP ${T(-ratio * skew, 2)} ticks to encourage buying`}</span>`;
+  // 3e quotes
+  const half = g("half_spread"), base = pnum("min half-spread"), tb = g("target_bid"), ta = g("target_ask");
+  $("f-quote").innerHTML = L("half-spread", `base + vol mult × σ = ${base} + ${param("volatility multiplier")} × ${T(sig, 3)} = <b>${T(half, 2)}</b> ticks <span class="dim">(${usd(half * tick)})</span>`) + "<br>" +
+    L("target bid", tb ? `⌊reservation − half⌋ = ⌊${T(res, 2)} − ${T(half, 2)}⌋ = <b class="up">${tb}</b> <span class="dim">= ${usd(tb * tick, pd)}</span>` : `<span class="dim">not quoting (inventory limit)</span>`) + "<br>" +
+    L("target ask", ta ? `⌈reservation + half⌉ = ⌈${T(res, 2)} + ${T(half, 2)}⌉ = <b class="down">${ta}</b> <span class="dim">= ${usd(ta * tick, pd)}</span>` : `<span class="dim">not quoting (inventory limit)</span>`) + "<br>" +
+    `<span class="dim">→ resting now: bid ${s.our_bid ? P(s.our_bid) : "none"} · ask ${s.our_ask ? P(s.our_ask) : "none"}. Our quotes are ${T((ta - tb), 0)} ticks wide against the market's ${spr}, so we only fill when the price moves.</span>`;
+
+  // risk
+  const lim = n => { const l = info.limits.find(x => x[0] === n); return l ? parseFloat(l[1]) : NaN; };
+  const size = s.orders.find(o => o.cl_id)?.qty || Math.round(pnum("order size") / lot);
+  const worst = (s.position_lots + s.open_buy_qty + size) * lot;
+  const band = lim("price band"), dist = tb ? Math.abs(tb - mid) : 0;
+  const rows = [
+    [!s.killed, "Kill switch is off", s.killed ? "ON: everything blocked" : "off"],
+    [size * lot <= lim("max order size"), "Order size within the per-order cap", `${(size * lot).toFixed(qd)} ≤ ${lim("max order size")}`],
+    [Math.abs(worst) <= lim("max position"), "Worst-case position within limit (position + all open buys + this order)", `${worst.toFixed(qd)} ≤ ${lim("max position")}`],
+    [s.open_orders < lim("max open orders"), "Open orders under the cap", `${s.open_orders} < ${lim("max open orders")}`],
+    [dist <= band, "Price within the band around mid (catches bad prices)", `${T(dist, 1)} ≤ ${band} ticks`],
+    [snap.order_rate <= lim("max orders / second"), "Order rate under the limit", `${snap.order_rate.toFixed(1)} ≤ ${lim("max orders / second")} /s`],
+    [s.pnl > -lim("max loss (kill switch)"), "Loss above the automatic kill level", `${s.pnl.toFixed(4)} > −${lim("max loss (kill switch)")}`],
+  ];
+  $("risk-live").innerHTML = rows.map(([ok, t, n]) => `<div class="check"><span class="ic ${ok ? "up" : "down"}">${ok ? "✓" : "✕"}</span><span>${t}</span><span class="num">${n}</span></div>`).join("") +
+    `<p class="small" style="margin:10px 0 0">Total rejected by risk so far: <b>${s.risk_rejects}</b>. The console's Risk tab breaks this down by reason.</p>`;
+
+  // pnl
+  const midUsd = mid * tick, posVal = pos * midUsd, cash = s.pnl + s.fees - posVal;
+  $("pnl-grid").innerHTML = [
+    ["Cash", usd(cash, 4), "received from sells − paid for buys"],
+    ["Position", `${pos.toFixed(qd)} ${info.symbol.replace(/USDT$|USDC$|FDUSD$/, "")}`, pos > 0 ? "long" : pos < 0 ? "short" : "flat"],
+    ["Position value", usd(posVal, 4), `position × mid ${usd(midUsd, pd)}`],
+    ["Fees", usd(-s.fees, 4), "paid to the exchange"],
+    ["PnL", `<span class="${s.pnl >= 0 ? "up" : "down"}">${usd(s.pnl, 4)}</span>`, "cash + position value − fees"],
+  ].map(([l, x, h]) => `<div><div class="l">${l}</div><div class="x">${x}</div><div class="h">${h}</div></div>`).join("");
+  $("f-pnl").innerHTML = L("PnL", `cash + position × mid − fees = ${usd(cash, 4)} + ${pos.toFixed(qd)} × ${usd(midUsd, pd)} − ${usd(s.fees, 4)} = <b>${usd(s.pnl, 4)}</b>`);
+  const gap = (ta && tb) ? (ta - tb) * tick : 2 * half * tick;
+  const ordQty = pnum("order size");
+  setF("gapusd", usd(gap)); setF("gapper", usd(gap * ordQty, 5)); setF("notional", usd(ordQty * midUsd));
+  const fs = s.fills_recent.filter(f => f.ts_ns);
+  if (fs.length) {
+    const mo = fs.reduce((a, f) => a + (f.side === 0 ? 1 : -1) * (mid - f.price), 0) / fs.length;
+    setF("markout", `<span class="${mo >= 0 ? "up" : "down"}">${mo >= 0 ? "+" : ""}${T(mo, 1)} ticks</span> over the last ${fs.length} fills`);
+  } else setF("markout", "no fills yet");
+}
+
+(function connect() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => $("st-engine").className = "live ok";
+  ws.onmessage = e => { snap = JSON.parse(e.data); const now = performance.now(); if (now - lastRender > 500) { lastRender = now; renderEngine(); } };
+  ws.onclose = () => { $("st-engine").className = "live"; setTimeout(connect, 1500); };
+})();
+
+/* ---------- raw frames and streams, from the engine's feed adapter ---------- */
+function renderRaw() {
+  if (!snap || frozen) return;
+  const i = snap.info;
+  $("streams").innerHTML = `<thead><tr><th>Stream</th><th>What it carries</th></tr></thead><tbody>` +
+    i.streams.map(([n, d]) => `<tr><td class="m">${esc(n)}</td><td>${esc(d)}</td></tr>`).join("") + `</tbody>`;
+  const raw = snap.raw || [];
+  const rate = Object.fromEntries((snap.feed || []).filter(([k]) => k.startsWith("frames:")).map(([k, v]) => [k.slice(7), v]));
+  if (raw.length) {
+    $("raw-frames").innerHTML = raw.map(([k, t]) => `<div class="box"><div class="stream-h"><b>${esc(k)}</b><span>${rate[k] !== undefined ? rate[k].toLocaleString() + " received" : ""}</span></div><pre class="raw">${hl(t.length > 900 ? t.slice(0, 900) + " …" : t)}</pre></div>`).join("");
+  }
+  const connected = (snap.feed || []).find(([k]) => k === "connected");
+  $("st-venue").className = "live" + (connected && connected[1] ? " ok" : "");
+  const bb = snap.stats.bids[0];
+  if (bb && bb[1]) {
+    const text = (bb[0] * tick).toFixed(pd), qtxt = (bb[1] * lot).toFixed(qd);
+    $("f-parse").innerHTML = L("price", `<span class="s">"${text}"</span> → ${pd} decimals → <b>${bb[0].toLocaleString("en-US")}</b> ticks <span class="dim">(integer)</span>`) + "<br>" +
+      L("size", `<span class="s">"${qtxt}"</span> → ${qd} decimals → <b>${bb[1].toLocaleString("en-US")}</b> lots <span class="dim">(1 lot = ${lot.toFixed(qd)})</span>`);
+  }
+}
+function hl(text) {
+  return esc(text).replace(/&quot;([^&]+?)&quot;:/g, '<span class="k">"$1"</span>:').replace(/:&quot;([^&]*?)&quot;/g, ':<span class="s">"$1"</span>');
+}
+setInterval(renderRaw, 700);
+</script>
+</body>
+</html>

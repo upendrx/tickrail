@@ -1,0 +1,1111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tickrail Console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c4501b'/%3E%3Cpath d='M6 21l6-7 5 4 9-10' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@80..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #eef1f4; --surface: #ffffff; --surface2: #f6f8fa; --ink: #121a24; --muted: #5b6776; --faint: #8a95a3;
+  --line: #dde2e8; --accent: #2b59c3; --accent-soft: rgba(43,89,195,.10); --brand: #c4501b;
+  --bid: #0e8a5f; --ask: #d1434b; --bid-soft: rgba(14,138,95,.13); --ask-soft: rgba(209,67,75,.13);
+  --warn: #b7791f; --warn-soft: rgba(183,121,31,.13); --ok: #0e8a5f;
+  --shadow: 0 1px 2px rgba(18,26,36,.05), 0 2px 8px rgba(18,26,36,.04);
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b1016; --surface: #121922; --surface2: #18212c; --ink: #e5eaf0; --muted: #93a0ae; --faint: #6b7886;
+    --line: #243040; --accent: #7aa2ff; --accent-soft: rgba(122,162,255,.13); --brand: #f07a45;
+    --bid: #36d399; --ask: #ff6b75; --bid-soft: rgba(54,211,153,.14); --ask-soft: rgba(255,107,117,.14);
+    --warn: #f5b83d; --warn-soft: rgba(245,184,61,.14); --ok: #36d399;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1016; --surface: #121922; --surface2: #18212c; --ink: #e5eaf0; --muted: #93a0ae; --faint: #6b7886;
+  --line: #243040; --accent: #7aa2ff; --accent-soft: rgba(122,162,255,.13); --brand: #f07a45;
+  --bid: #36d399; --ask: #ff6b75; --bid-soft: rgba(54,211,153,.14); --ask-soft: rgba(255,107,117,.14);
+  --warn: #f5b83d; --warn-soft: rgba(245,184,61,.14); --ok: #36d399;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- top bar ---------- */
+.top { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bar { display: flex; align-items: center; gap: 14px; padding: 10px 20px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font: 700 17px var(--display); font-stretch: 88%; letter-spacing: -.01em; }
+.brand .logo { width: 26px; height: 26px; border-radius: 7px; background: var(--brand); display: grid; place-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--mono); padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--surface2); white-space: nowrap; }
+.chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.chip.ok .dot { background: var(--ok); box-shadow: 0 0 0 3px var(--bid-soft); }
+.chip.bad .dot { background: var(--ask); }
+.chip.mode { color: var(--ink); }
+.spacer { flex: 1; }
+.btn { border: 1px solid var(--line); background: var(--surface2); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 500; font-size: 13px; }
+.btn:hover { border-color: var(--accent); }
+a.btn { text-decoration: none; display: inline-block; }
+.btn.guide { border-color: var(--brand); color: var(--brand); font-weight: 600; }
+.btn.kill { border-color: var(--ask); color: var(--ask); background: transparent; font-weight: 600; }
+.btn.kill.armed { background: var(--ask); color: #fff; }
+.btn.resume { border-color: var(--bid); color: var(--bid); background: transparent; font-weight: 600; }
+.tabs { display: flex; gap: 2px; padding: 0 14px; overflow-x: auto; scrollbar-width: none; }
+.tabs button { background: none; border: none; border-bottom: 2px solid transparent; padding: 9px 12px 10px; cursor: pointer; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--brand); }
+.tabs button:hover { color: var(--ink); }
+
+/* ---------- layout ---------- */
+main { padding: 18px 20px 60px; max-width: 1480px; margin: 0 auto; }
+.tab { display: grid; gap: 16px; }
+.row { display: grid; gap: 16px; }
+.c2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.main-side { grid-template-columns: minmax(0, 1fr) 360px; }
+@media (max-width: 1100px) { .main-side, .c3 { grid-template-columns: 1fr; } }
+@media (max-width: 820px) { .c2 { grid-template-columns: 1fr; } main { padding: 12px 16px 40px; } .bar { padding: 10px 16px; } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
+.ph { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px 0; }
+.ph h2 { font: 650 15px var(--display); font-stretch: 92%; margin: 0; letter-spacing: .005em; }
+.ph .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.ph .tools { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.info-btn { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface2); cursor: pointer; font: 600 12px var(--mono); color: var(--muted); flex: none; }
+.info-btn[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.explain { margin: 10px 16px 0; padding: 10px 12px; background: var(--accent-soft); border-radius: 8px; font-size: 13px; color: var(--ink); }
+.explain p { margin: 0 0 6px; } .explain p:last-child { margin: 0; }
+.pb { padding: 12px 16px 16px; }
+
+/* ---------- KPIs ---------- */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.kpi { padding: 12px 14px; }
+.kpi .l { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+.kpi .v { font: 600 21px var(--mono); font-variant-numeric: tabular-nums; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .h { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+.up { color: var(--bid); } .down { color: var(--ask); }
+
+/* ---------- narrative ---------- */
+.story { font-size: 15px; line-height: 1.65; max-width: 110ch; }
+.story b { font-weight: 600; }
+.story .px { font-family: var(--mono); font-size: 13.5px; }
+
+/* ---------- pipeline ---------- */
+.pipe { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; position: relative; }
+@media (max-width: 1000px) { .pipe { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .pipe { grid-template-columns: 1fr 1fr; } }
+.stage { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface2); position: relative; transition: border-color .3s; }
+.stage.flash { border-color: var(--brand); }
+.stage .n { font: 600 11px var(--mono); color: var(--brand); letter-spacing: .06em; }
+.stage .t { font-weight: 600; margin-top: 2px; }
+.stage .c { font: 600 18px var(--mono); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.stage .d { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.stage .thread { font: 10.5px var(--mono); color: var(--faint); margin-top: 6px; }
+
+/* ---------- tables ---------- */
+.tw { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.m { font-family: var(--mono); font-size: 12.5px; }
+.empty { color: var(--faint); font-style: italic; padding: 14px 8px; }
+.pill { font: 600 10.5px var(--mono); padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.pill.buy { background: var(--bid-soft); color: var(--bid); } .pill.sell { background: var(--ask-soft); color: var(--ask); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.info { background: var(--accent-soft); color: var(--accent); }
+.pill.mute { background: var(--surface2); color: var(--muted); border: 1px solid var(--line); }
+
+/* ---------- order book ---------- */
+.ladder td { position: relative; padding: 3px 8px; font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; border: none; }
+.ladder .bar { position: absolute; top: 1px; bottom: 1px; right: 0; border-radius: 3px; }
+.ladder tr.a .bar { background: var(--ask-soft); } .ladder tr.b .bar { background: var(--bid-soft); }
+.ladder tr.a td.p { color: var(--ask); } .ladder tr.b td.p { color: var(--bid); }
+.ladder td span { position: relative; }
+.ladder tr.ours td.p::after { content: "◀ our quote"; font: 600 10px var(--body); color: var(--accent); margin-left: 8px; }
+.ladder tr.mid td { text-align: center; color: var(--muted); font-size: 12px; background: var(--surface2); border-block: 1px solid var(--line); padding: 5px; }
+
+/* ---------- charts ---------- */
+.chart { position: relative; }
+.chart canvas { width: 100%; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.legend i.dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ---------- meters ---------- */
+.meter { margin: 12px 0; }
+.meter .top2 { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.meter .top2 b { font-weight: 600; }
+.meter .val { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.meter .track { height: 8px; background: var(--surface2); border: 1px solid var(--line); border-radius: 99px; margin-top: 6px; overflow: hidden; }
+.meter .fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+.meter .fill.w { background: var(--warn); } .meter .fill.x { background: var(--ask); }
+.meter .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* ---------- misc ---------- */
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 13px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.diag { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.diag .it { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface2); }
+.diag .it .k { font: 600 12px var(--mono); color: var(--muted); }
+.diag .it .v { font: 600 17px var(--mono); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.diag .it .d { font-size: 12px; color: var(--muted); margin-top: 3px; }
+code, .code { font-family: var(--mono); font-size: 12.5px; background: var(--surface2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+pre.cmd { font: 12.5px/1.6 var(--mono); background: var(--surface2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; margin: 8px 0; white-space: pre; }
+.prose { max-width: 78ch; font-size: 14px; }
+.prose h3 { font: 650 15px var(--display); margin: 18px 0 6px; }
+.prose p { margin: 0 0 10px; }
+.prose ul { margin: 0 0 10px; padding-left: 20px; } .prose li { margin: 3px 0; }
+.gloss { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.gloss div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface2); font-size: 13px; }
+.gloss b { display: block; font-family: var(--display); font-size: 14px; margin-bottom: 2px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.mcard { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface2); cursor: pointer; text-align: left; }
+.mcard:hover, .mcard.sel { border-color: var(--accent); }
+.mcard .s { font: 600 12px var(--mono); color: var(--muted); }
+.mcard .p { font: 600 18px var(--mono); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.mcard .ch { font: 500 12px var(--mono); }
+.mkt tr { cursor: pointer; } .mkt tr:hover td { background: var(--surface2); } .mkt tr.sel td { background: var(--accent-soft); }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+input[type="search"], select { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface2); color: var(--ink); }
+.note { font-size: 12px; color: var(--faint); margin-top: 8px; }
+.warnbox { border: 1px solid var(--warn); background: var(--warn-soft); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
+.flow .arrow { color: var(--faint); }
+.flow .node { border: 1px solid var(--line); background: var(--surface2); border-radius: 8px; padding: 4px 10px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="bar">
+    <div class="brand"><span class="logo"><svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 23l7-8 6 5 11-13" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>tickrail</div>
+    <span class="chip mode" id="c-mode" title="Which mode the Rust engine was started in">starting…</span>
+    <span class="chip" id="c-sym" title="Instrument the engine is trading">—</span>
+    <span class="chip" id="c-strat" title="Strategy running inside the engine">—</span>
+    <span class="chip" id="c-engine" title="WebSocket connection from this page to the Rust engine"><span class="dot"></span>engine</span>
+    <span class="chip" id="c-feed" title="The engine's connection to the market-data venue" hidden><span class="dot"></span><span id="c-feed-name">feed</span></span>
+    <span class="spacer"></span>
+    <a class="btn guide" href="/guide" title="Step-by-step explanation of what the engine does">How it works →</a>
+    <button class="btn" id="theme" title="Switch colour theme">Theme: system</button>
+    <button class="btn kill" id="kill" title="Cancels every order and blocks new ones">Kill switch</button>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button role="tab" data-tab="book" aria-selected="false">Order book &amp; trades</button>
+    <button role="tab" data-tab="strategy" aria-selected="false">Strategy</button>
+    <button role="tab" data-tab="orders" aria-selected="false">Orders &amp; fills</button>
+    <button role="tab" data-tab="risk" aria-selected="false">Risk</button>
+    <button role="tab" data-tab="latency" aria-selected="false">Latency</button>
+    <button role="tab" data-tab="markets" aria-selected="false">Market explorer</button>
+    <button role="tab" data-tab="data" aria-selected="false">Data sources</button>
+    <button role="tab" data-tab="guide" aria-selected="false">Guide &amp; glossary</button>
+  </nav>
+</div>
+
+<main>
+<!-- ======================= OVERVIEW ======================= -->
+<section class="tab" id="t-overview">
+  <div class="kpis">
+    <div class="panel kpi"><div class="l">Last trade <span id="k-lastdir"></span></div><div class="v" id="k-last">—</div><div class="h">latest public trade price</div></div>
+    <div class="panel kpi"><div class="l">Best bid / ask</div><div class="v" id="k-bbo" style="font-size:14.5px;white-space:normal;line-height:1.35">—</div><div class="h" id="k-spread">spread —</div></div>
+    <div class="panel kpi"><div class="l">PnL (net of fees)</div><div class="v" id="k-pnl">—</div><div class="h">marked at current mid</div></div>
+    <div class="panel kpi"><div class="l">Position</div><div class="v" id="k-pos">—</div><div class="h" id="k-posh">flat</div></div>
+    <div class="panel kpi"><div class="l">Our fills</div><div class="v" id="k-fills">—</div><div class="h" id="k-fillsh">—</div></div>
+    <div class="panel kpi"><div class="l">Market data</div><div class="v" id="k-md">—</div><div class="h">messages per second</div></div>
+    <div class="panel kpi"><div class="l">Tick → order</div><div class="v" id="k-t2o">—</div><div class="h">median software reaction time</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><div><h2>What is happening right now</h2><div class="sub">A plain-language summary, rewritten from live data ten times a second. New here? <a href="/guide" style="color:var(--brand)">Read the step-by-step walkthrough</a>.</div></div></div>
+    <div class="pb"><div class="story" id="story">Waiting for the engine…</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><div><h2>The pipeline, live</h2><div class="sub">Every market event goes through these stages in order. The counters are running totals since start.</div></div>
+      <div class="tools"><button class="info-btn" aria-expanded="false" data-info="pipe">i</button></div></div>
+    <div class="explain" id="x-pipe" hidden>
+      <p>Stages 2 to 5 run on <b>one CPU thread</b>, the engine thread, so no locks are needed and every run is deterministic. Stage 1 (feed or simulator) and stage 6 (venue) run on their own threads and talk to the engine through lock-free ring buffers.</p>
+      <p>A stage's border lights up when its counter changes. Read left to right: many market messages come in, a smaller number of book updates reach the strategy, and far fewer orders go out.</p>
+    </div>
+    <div class="pb"><div class="pipe" id="pipe"></div></div>
+  </div>
+
+  <div class="row main-side">
+    <div class="panel">
+      <div class="ph"><div><h2>Price and our quotes</h2><div class="sub">Last 2 minutes. Hover to read exact values.</div></div>
+        <div class="tools"><button class="info-btn" aria-expanded="false" data-info="pxchart">i</button></div></div>
+      <div class="explain" id="x-pxchart" hidden><p>The grey line is the <b>mid price</b>, halfway between the best bid and best ask. The green and red lines are the prices where <b>our</b> buy and sell orders are resting. A market maker earns the gap between them when both sides fill, and loses when the price runs through one side (adverse selection).</p></div>
+      <div class="pb">
+        <div class="legend"><span><i style="background:var(--muted)"></i>mid</span><span><i style="background:var(--bid)"></i>our bid</span><span><i style="background:var(--ask)"></i>our ask</span></div>
+        <div class="chart"><canvas id="ch-price" height="400"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>Order book</h2><div class="sub">Top 8 levels each side</div></div></div>
+      <div class="pb"><table class="ladder" id="mini-book"></table></div>
+    </div>
+  </div>
+
+  <div class="row c2">
+    <div class="panel">
+      <div class="ph"><div><h2>PnL and position</h2><div class="sub">Profit is marked to the current mid; position is in instrument units.</div></div>
+        <div class="tools"><button class="info-btn" aria-expanded="false" data-info="plchart">i</button></div></div>
+      <div class="explain" id="x-plchart" hidden><p><b>PnL</b> = cash from all fills + position × current mid − fees. It moves even without trading, because an open position is revalued at every tick. <b>Position</b> (orange, right axis) shows inventory; a good market maker keeps it close to zero.</p></div>
+      <div class="pb">
+        <div class="legend"><span><i style="background:var(--accent)"></i>PnL (left axis)</span><span><i style="background:var(--warn)"></i>position (right axis)</span></div>
+        <div class="chart"><canvas id="ch-pnl" height="220"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>Latest public trades</h2><div class="sub">Everyone's trades on the venue, not just ours</div></div></div>
+      <div class="pb tw"><table id="mini-tape"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= BOOK ======================= -->
+<section class="tab" id="t-book" hidden>
+  <div class="row main-side">
+    <div class="panel">
+      <div class="ph"><div><h2>Depth chart</h2><div class="sub">Cumulative size available at each price</div></div>
+        <div class="tools"><button class="info-btn" aria-expanded="false" data-info="depth">i</button></div></div>
+      <div class="explain" id="x-depth" hidden><p>Each curve adds up resting size moving away from the middle. A steep wall means lots of liquidity, so a large order would barely move the price. A shallow side is thin, and prices tend to move toward thin sides. That is also why the microprice leans toward the thinner side.</p></div>
+      <div class="pb">
+        <div class="legend"><span><i style="background:var(--bid)"></i>cumulative bids</span><span><i style="background:var(--ask)"></i>cumulative asks</span></div>
+        <div class="chart"><canvas id="ch-depth" height="300"></canvas></div>
+        <dl class="kv" style="margin-top:12px" id="book-stats"></dl>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>Full ladder</h2><div class="sub">All levels the engine holds (up to 20 a side)</div></div>
+        <div class="tools"><button class="info-btn" aria-expanded="false" data-info="ladder">i</button></div></div>
+      <div class="explain" id="x-ladder" hidden><p>Red rows are <b>asks</b> (offers to sell), lowest at the bottom. Green rows are <b>bids</b> (offers to buy), highest at the top. The gap in the middle is the <b>spread</b>. Bar length is size relative to the largest level. Rows tagged "our quote" are prices where we have an order resting.</p></div>
+      <div class="pb"><table class="ladder" id="full-book"></table></div>
+    </div>
+  </div>
+  <div class="row c2">
+    <div class="panel">
+      <div class="ph"><div><h2>Trade tape</h2><div class="sub">The 24 most recent trades</div></div>
+        <div class="tools"><button class="info-btn" aria-expanded="false" data-info="tape">i</button></div></div>
+      <div class="explain" id="x-tape" hidden><p>Each trade has an <b>aggressor</b>: the side that crossed the spread. A green BUY means someone paid the ask; a red SELL means someone hit the bid. Runs of one colour are short-term buying or selling pressure.</p></div>
+      <div class="pb tw"><table id="tape"></table></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>Flow balance</h2><div class="sub">Aggressor volume in the visible tape</div></div></div>
+      <div class="pb">
+        <div id="flow-meters"></div>
+        <p class="note">Only the last 24 trades are sent to the dashboard, so this is a short-term reading.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= STRATEGY ======================= -->
+<section class="tab" id="t-strategy" hidden>
+  <div class="panel">
+    <div class="ph"><div><h2 id="st-title">Strategy</h2><div class="sub" id="st-sub">—</div></div></div>
+    <div class="pb prose" id="st-desc"></div>
+  </div>
+  <div class="panel">
+    <div class="ph"><div><h2>Where the strategy wants to quote</h2><div class="sub">Every price the strategy computes, on one axis in ticks from the mid</div></div>
+      <div class="tools"><button class="info-btn" aria-expanded="false" data-info="qline">i</button></div></div>
+    <div class="explain" id="x-qline" hidden><p>Read left to right: the market's best bid and ask, the strategy's fair value (microprice), the <b>reservation price</b> (fair value shifted away from our inventory), and the target bid and ask one half-spread either side of it. When we are long, the whole set shifts left so our ask is more attractive and we sell down the inventory.</p></div>
+    <div class="pb"><div class="chart"><canvas id="ch-quote" height="200"></canvas></div></div>
+  </div>
+  <div class="panel">
+    <div class="ph"><div><h2>Internal state</h2><div class="sub">The numbers the strategy used on its most recent decision</div></div></div>
+    <div class="pb"><div class="diag" id="diag"></div></div>
+  </div>
+  <div class="panel">
+    <div class="ph"><div><h2>Parameters</h2><div class="sub">Set on the command line when the engine starts</div></div></div>
+    <div class="pb tw"><table id="params"></table></div>
+  </div>
+</section>
+
+<!-- ======================= ORDERS ======================= -->
+<section class="tab" id="t-orders" hidden>
+  <div class="kpis" id="order-kpis"></div>
+  <div class="row c2">
+    <div class="panel">
+      <div class="ph"><div><h2>Our working orders</h2><div class="sub">Orders the OMS believes are live or in flight</div></div>
+        <div class="tools"><button class="info-btn" aria-expanded="false" data-info="orders">i</button></div></div>
+      <div class="explain" id="x-orders" hidden><p><b>Pending new</b>: sent, venue hasn't confirmed yet. <b>Live</b>: resting in the book. <b>Pending cancel</b>: we asked to cancel and are waiting for confirmation. Leaves is the unfilled quantity. Age is time since we sent the order.</p></div>
+      <div class="pb tw"><table id="orders"></table></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>Our recent fills</h2><div class="sub">Executions against our orders, newest first</div></div>
+        <div class="tools"><button class="info-btn" aria-expanded="false" data-info="fills">i</button></div></div>
+      <div class="explain" id="x-fills" hidden><p><b>Maker</b> means our resting order was hit; <b>taker</b> means we crossed the spread. <b>Markout</b> is how the mid has moved since the fill, in ticks, signed so that positive is good for us. Consistently negative markouts are adverse selection: we mostly get filled just before the price moves against us.</p></div>
+      <div class="pb tw"><table id="fills"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= RISK ======================= -->
+<section class="tab" id="t-risk" hidden>
+  <div class="row c2">
+    <div class="panel">
+      <div class="ph"><div><h2>Limit usage</h2><div class="sub">How close the engine is to each pre-trade limit</div></div>
+        <div class="tools"><button class="info-btn" aria-expanded="false" data-info="risk">i</button></div></div>
+      <div class="explain" id="x-risk" hidden><p>Every new order is checked against these limits <b>on the engine thread, before it leaves</b>, in well under a microsecond. Regulators require this (SEC 15c3-5, MiFID II RTS 6). Cancels are never blocked. Position usage counts the worst case: current position plus every open order on the same side filling.</p></div>
+      <div class="pb" id="meters"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>Kill switch</h2><div class="sub">Emergency stop</div></div></div>
+      <div class="pb">
+        <p id="kill-state" style="font-size:15px;margin:0 0 12px">—</p>
+        <p class="note" style="margin-top:0">Pressing it sets one atomic flag. On its next housekeeping pass (within microseconds) the engine cancels every working order, and risk then rejects every new order. It also trips automatically when PnL falls below the max-loss limit. Resume clears the flag.</p>
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="btn kill" id="kill2">Kill switch</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="row c2">
+    <div class="panel">
+      <div class="ph"><div><h2>Rejected by risk</h2><div class="sub">Orders the strategy wanted but risk blocked, by reason</div></div></div>
+      <div class="pb tw"><table id="rejects"></table></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>Configured limits</h2><div class="sub">Hard limits, fixed at start-up</div></div></div>
+      <div class="pb tw"><table id="limits"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= LATENCY ======================= -->
+<section class="tab" id="t-latency" hidden>
+  <div class="panel">
+    <div class="ph"><div><h2>Latency by path</h2><div class="sub">Rolling 30-second window of every measured event</div></div>
+      <div class="tools"><button class="info-btn" aria-expanded="false" data-info="lat">i</button></div></div>
+    <div class="explain" id="x-lat" hidden>
+      <p><b>p50</b> is the median; <b>p99</b> means 99% of events were faster than this. In trading, the tail (p99, p99.9) matters as much as the median, because the slow moments are often the busiest and most valuable ones.</p>
+      <p>Timer resolution depends on the machine: on Apple Silicon the system counter ticks every ~41.7 ns, so small values land on multiples of that; x86 and most ARM servers resolve to a few ns. The multi-microsecond tail comes from the OS scheduler. Pinning the engine to an isolated core on Linux with <code>wait = "spin"</code> removes most of it (see the performance chapter of the docs).</p>
+    </div>
+    <div class="pb tw"><table id="lat"></table></div>
+  </div>
+  <div class="row c2">
+    <div class="panel">
+      <div class="ph"><div><h2>Tick → order distribution</h2><div class="sub">How many orders fell in each latency bucket (log scale)</div></div></div>
+      <div class="pb"><div class="chart"><canvas id="ch-hist" height="240"></canvas></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>Tick → order over time</h2><div class="sub">p50 and p99 of the rolling window</div></div></div>
+      <div class="pb">
+        <div class="legend"><span><i style="background:var(--accent)"></i>p50</span><span><i style="background:var(--warn)"></i>p99</span></div>
+        <div class="chart"><canvas id="ch-lat" height="240"></canvas></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MARKETS ======================= -->
+<section class="tab" id="t-markets" hidden>
+  <div class="panel">
+    <div class="ph"><div><h2>Crypto spot markets, live</h2><div class="sub">Public data from Binance, streamed straight to this browser and independent of the engine</div></div>
+      <div class="tools"><button class="info-btn" aria-expanded="false" data-info="mkts">i</button></div></div>
+    <div class="explain" id="x-mkts" hidden>
+      <p>This tab connects your browser directly to Binance's public stream <code>!miniTicker@arr</code>, which pushes 24-hour statistics for every listed symbol once per second. No API key is needed and the engine isn't involved, so it works in any mode. It's here to browse symbols. The engine itself can use any adapter: Binance, OKX, Kraken, Alpaca or a CSV file.</p>
+      <p>Click a row to load its one-minute chart and get the command that starts the engine on that symbol.</p>
+    </div>
+    <div class="pb"><div class="cards" id="mk-cards"></div></div>
+  </div>
+  <div class="row main-side">
+    <div class="panel">
+      <div class="ph"><div><h2>All pairs</h2><div class="sub" id="mk-count">connecting…</div></div></div>
+      <div class="pb">
+        <div class="controls">
+          <input type="search" id="mk-q" placeholder="Search symbol, e.g. SOL" aria-label="Search symbols">
+          <select id="mk-quote" aria-label="Quote currency"><option>USDT</option><option>FDUSD</option><option>USDC</option><option>BTC</option><option>ETH</option><option value="">All</option></select>
+          <select id="mk-sort" aria-label="Sort by"><option value="q">Sort: 24h volume</option><option value="chg">Sort: 24h change</option><option value="abs">Sort: biggest move</option><option value="s">Sort: symbol</option></select>
+        </div>
+        <div class="tw"><table class="mkt" id="mk-table"></table></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2 id="mk-sel">BTCUSDT</h2><div class="sub">Last 3 hours, 1-minute closes</div></div></div>
+      <div class="pb">
+        <div class="chart"><canvas id="ch-kline" height="220"></canvas></div>
+        <dl class="kv" id="mk-detail" style="margin-top:12px"></dl>
+        <p style="margin:14px 0 4px;font-size:13px">Trade this symbol with the engine (paper fills):</p>
+        <pre class="cmd" id="mk-cmd"></pre>
+        <button class="btn" id="mk-copy">Copy command</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= DATA ======================= -->
+<section class="tab" id="t-data" hidden>
+  <div class="panel">
+    <div class="ph"><div><h2>Where every number on this page comes from</h2><div class="sub">The engine is the only source for tabs 1 to 6</div></div></div>
+    <div class="pb prose" style="max-width:none">
+      <div class="flow" style="margin-bottom:10px"><span class="node" id="ds-venue">venue</span><span class="arrow">→</span><span class="node">feed adapter thread</span><span class="arrow">→ ring →</span><span class="node">engine thread</span><span class="arrow">→ ring →</span><span class="node">telemetry</span><span class="arrow">→ /ws, 10 Hz →</span><span class="node">this page</span></div>
+      <p class="note" style="margin:0">The Market explorer tab is the one exception: it reads Binance's public API from your browser directly.</p>
+    </div>
+  </div>
+  <div class="row c2">
+    <div class="panel">
+      <div class="ph"><div><h2>Engine data source</h2><div class="sub" id="ds-src">—</div></div></div>
+      <div class="pb"><div class="tw"><table id="ds-streams"></table></div><dl class="kv" id="ds-feed" style="margin-top:14px"></dl></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>Latest raw frames from the venue</h2><div class="sub">Exactly as received, one per message type, sampled every 250 ms</div></div></div>
+      <div class="pb" id="ds-raw"><p class="empty">Raw frames appear here when a network adapter is running.</p></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="ph"><div><h2>Available adapters</h2><div class="sub">Pick one with <code>[feed] adapter = "..."</code> in the config file</div></div></div>
+    <div class="pb tw">
+      <table>
+        <thead><tr><th>Adapter</th><th>Market</th><th>Access</th><th>Data used</th></tr></thead>
+        <tbody>
+          <tr><td><b>simulator</b></td><td>Built-in exchange with synthetic traders</td><td><span class="pill buy">offline</span></td><td>L2 updates and trades from a real matching engine</td></tr>
+          <tr><td><b>binance</b></td><td>Binance spot (also Binance.US)</td><td><span class="pill buy">public, no key</span></td><td>Top-20 depth, best bid/ask, trades</td></tr>
+          <tr><td><b>okx</b></td><td>OKX spot</td><td><span class="pill buy">public, no key</span></td><td>Top-5 depth, tick-by-tick best bid/ask, trades</td></tr>
+          <tr><td><b>kraken</b></td><td>Kraken spot</td><td><span class="pill buy">public, no key</span></td><td>Incremental book (depth 10 to 1000), trades</td></tr>
+          <tr><td><b>alpaca</b></td><td>US equities</td><td><span class="pill warn">free account key</span></td><td>Quotes and trades (IEX free, SIP paid)</td></tr>
+          <tr><td><b>csv</b></td><td>Any market, from a file</td><td><span class="pill buy">local file</span></td><td>Levels, top of book, trades</td></tr>
+        </tbody>
+      </table>
+      <p class="note">New venues are a single file each. See "Writing an adapter" in the developer docs.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= GUIDE ======================= -->
+<section class="tab" id="t-guide" hidden>
+  <div class="row c2">
+    <div class="panel">
+      <div class="ph"><div><h2>How to run each mode</h2><div class="sub">From the project folder, after <code>cargo build --release</code></div></div></div>
+      <div class="pb prose">
+        <h3>Live market data, paper fills</h3>
+        <p>Real prices from a public feed. The engine simulates fills and never sends orders. Precision is looked up automatically.</p>
+<pre class="cmd">tickrail run -c config/binance.toml
+tickrail run -c config/okx.toml --set feed.symbol=ETH-USDT
+tickrail run -c config/kraken.toml</pre>
+        <h3>Built-in exchange simulator</h3>
+        <p>A full matching engine with synthetic traders, some of them informed, so market making here is realistically hard.</p>
+<pre class="cmd">tickrail run</pre>
+        <h3>Backtest</h3>
+        <p>Replays a journal or a CSV file through the strategy, deterministically, at millions of events per second.</p>
+<pre class="cmd">tickrail replay data/binance-btcusdt.journal -c config/binance.toml --set strategy.half_spread_ticks=40</pre>
+        <h3>Analyse in Python</h3>
+<pre class="cmd">tickrail export data/binance-btcusdt.journal data/btc.csv
+python research/analyze.py data/btc.csv</pre>
+        <p class="note">Every setting lives in the config file; <code>--set section.key=value</code> overrides one from the command line. <code>tickrail list</code> shows the compiled-in adapters and strategies.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div><h2>How to read this console</h2></div></div>
+      <div class="pb prose">
+        <ul>
+          <li><b>Start with Overview.</b> The summary paragraph says in words what the engine is doing. The pipeline shows how much work each stage has done.</li>
+          <li><b>Order book &amp; trades</b> shows the market as the engine sees it.</li>
+          <li><b>Strategy</b> shows why it quotes where it does: fair value, inventory skew and spread, laid out on one axis.</li>
+          <li><b>Orders &amp; fills</b> shows what actually happened to our orders. Markouts reveal whether fills were good.</li>
+          <li><b>Risk</b> shows how close we are to each limit, and holds the kill switch.</li>
+          <li><b>Latency</b> shows how fast the software reacts, with the full distribution.</li>
+          <li>Every panel has an <b>i</b> button that explains what it shows.</li>
+        </ul>
+        <div class="warnbox">Paper execution: orders are filled by a simulator against real market data and never reach an exchange. PnL shown is simulated.</div>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="ph"><div><h2>Glossary</h2></div></div>
+    <div class="pb gloss">
+      <div><b>Bid / ask</b>Bid is the highest price someone will pay; ask is the lowest someone will sell at.</div>
+      <div><b>Spread</b>Ask minus bid. Market makers earn it; takers pay it.</div>
+      <div><b>Tick</b>The smallest price step the venue allows (BTCUSDT: 0.01).</div>
+      <div><b>Lot</b>The smallest quantity step (BTCUSDT: 0.00001 BTC).</div>
+      <div><b>Mid</b>(bid + ask) / 2.</div>
+      <div><b>Microprice</b>Mid weighted by the sizes at the top. It leans toward the thinner side, where the price is more likely to move next.</div>
+      <div><b>Order book (L2)</b>Total resting size at each price level. L3 would show every individual order.</div>
+      <div><b>Market maker</b>Posts both a bid and an ask and earns the spread, taking the risk of holding inventory.</div>
+      <div><b>Maker / taker</b>Maker orders rest in the book and add liquidity; taker orders cross the spread and remove it. Fees usually favour makers.</div>
+      <div><b>Post-only</b>An order the venue rejects rather than let it cross the spread, so it can only ever be a maker.</div>
+      <div><b>IOC</b>Immediate-or-cancel: fill what you can now, cancel the rest.</div>
+      <div><b>Inventory skew</b>Moving both quotes away from our position so trades tend to flatten it.</div>
+      <div><b>Adverse selection</b>Getting filled mostly by traders who know the price is about to move against you.</div>
+      <div><b>Markout</b>Price change after a fill, signed in our favour. The standard way to measure fill quality.</div>
+      <div><b>Tick-to-order</b>Time from receiving market data to sending an order. The core HFT latency number.</div>
+      <div><b>p50 / p99</b>Median and 99th-percentile latency. The tail shows worst-case behaviour.</div>
+      <div><b>SPSC ring</b>Lock-free single-producer/single-consumer queue, the only way our threads talk.</div>
+      <div><b>Journal</b>Binary log of every event, used to replay a session exactly.</div>
+      <div><b>Kill switch</b>An emergency stop that cancels everything and blocks new orders.</div>
+      <div><b>Paper trading</b>Running the strategy on real data with simulated fills and no real money.</div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const MAXH = 1200;
+const H = { t: [], mid: [], ob: [], oa: [], pnl: [], pos: [], p50: [], p99: [] };
+let snap = null, prevStats = null, info = null, killed = false, killArmed = false;
+let activeTab = "overview";
+
+/* ---------------- theme ---------------- */
+const THEMES = ["system", "light", "dark"];
+let theme = "system";
+try { theme = localStorage.getItem("hft-theme") || "system"; } catch (e) {}
+function applyTheme() {
+  if (theme === "system") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
+  $("theme").textContent = "Theme: " + theme;
+  try { localStorage.setItem("hft-theme", theme); } catch (e) {}
+  redrawAll();
+}
+$("theme").onclick = () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; applyTheme(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => redrawAll());
+
+/* ---------------- tabs & info toggles ---------------- */
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  activeTab = b.dataset.tab;
+  document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll(".tab").forEach(s => s.hidden = s.id !== "t-" + activeTab);
+  if (activeTab === "markets") { renderMarkets(); loadKlines(selSym); }
+  try { history.replaceState(null, "", "#" + activeTab); } catch (e) {}
+  redrawAll();
+});
+document.querySelectorAll(".info-btn").forEach(b => b.onclick = () => {
+  const box = $("x-" + b.dataset.info), open = box.hidden;
+  box.hidden = !open; b.setAttribute("aria-expanded", open);
+});
+if (location.hash) { const b = document.querySelector(`.tabs button[data-tab="${location.hash.slice(1)}"]`); if (b) setTimeout(() => b.click()); }
+
+/* ---------------- formatting ---------------- */
+let pxFmt = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+let qtyFmt = new Intl.NumberFormat("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+const px = t => t ? pxFmt.format(t * info.tick_size) : "—";
+const pxf = v => (v === null || v === undefined || !isFinite(v)) ? "—" : pxFmt.format(v);
+const qty = l => qtyFmt.format(l * info.lot_size);
+const num = n => Number(n).toLocaleString("en-US");
+function ns(v) {
+  if (!v) return "—";
+  if (v < 1e3) return v + " ns";
+  if (v < 1e6) return (v / 1e3).toFixed(v < 1e4 ? 2 : 1) + " µs";
+  if (v < 1e9) return (v / 1e6).toFixed(v < 1e7 ? 2 : 1) + " ms";
+  return (v / 1e9).toFixed(2) + " s";
+}
+function tsLabel(tsNs) {
+  if (!tsNs) return "—";
+  if (tsNs > 1e18) { const d = new Date(tsNs / 1e6); return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0"); }
+  return ns(Math.max(0, snap.stats.ts_ns - tsNs)) + " ago";
+}
+const sideName = s => s === 0 ? "buy" : "sell";
+const pill = (cls, t) => `<span class="pill ${cls}">${esc(t)}</span>`;
+
+/* ---------------- charts ---------------- */
+// Design height in CSS px, read once: assigning canvas.height rewrites the attribute.
+const baseH = c => +(c.dataset.h || (c.dataset.h = c.getAttribute("height")));
+class LineChart {
+  constructor(canvas, opt = {}) {
+    this.c = canvas; this.o = opt; this.hover = null; this.series = []; this.x = [];
+    canvas.addEventListener("mousemove", e => { const r = canvas.getBoundingClientRect(); this.hover = e.clientX - r.left; this.draw(); });
+    canvas.addEventListener("mouseleave", () => { this.hover = null; this.draw(); });
+  }
+  set(series, x) { this.series = series; this.x = x; this.draw(); }
+  draw() {
+    const c = this.c; if (!c.offsetParent) return;
+    const dpr = devicePixelRatio || 1, w = c.clientWidth, h = baseH(c);
+    c.style.height = h + "px"; c.width = w * dpr; c.height = h * dpr;
+    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    const pad = { l: this.o.padL ?? 72, r: this.o.right ? 64 : 12, t: 10, b: 22 };
+    const n = Math.max(2, this.x.length), X = i => pad.l + (w - pad.l - pad.r) * i / (n - 1);
+    const range = axis => {
+      const v = this.series.filter(s => (s.axis || 0) === axis).flatMap(s => s.data.filter(d => d !== null && isFinite(d)));
+      if (!v.length) return null;
+      let lo = Math.min(...v), hi = Math.max(...v);
+      if (this.o.zero && axis === 0) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+      if (hi - lo < 1e-12) { const p = Math.abs(hi) * 1e-4 || 1; lo -= p; hi += p; }
+      const m = (hi - lo) * 0.08; return [lo - m, hi + m];
+    };
+    const r0 = range(0), r1 = this.o.right ? range(1) : null;
+    const Y = (v, r) => pad.t + (h - pad.t - pad.b) * (1 - (v - r[0]) / (r[1] - r[0]));
+    g.font = "11px 'IBM Plex Mono', ui-monospace, monospace"; g.lineWidth = 1;
+    if (r0) {
+      for (let i = 0; i <= 4; i++) {
+        const v = r0[0] + (r0[1] - r0[0]) * i / 4, y = Y(v, r0);
+        g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+        g.fillStyle = css("--muted"); g.textAlign = "right"; g.fillText((this.o.fmt || (x => x.toFixed(2)))(v), pad.l - 8, y + 4);
+        if (r1) { const v1 = r1[0] + (r1[1] - r1[0]) * i / 4; g.textAlign = "left"; g.fillText((this.o.fmtR || (x => x.toFixed(3)))(v1), w - pad.r + 8, Y(v1, r1) + 4); }
+      }
+      if (this.o.zero && r0[0] < 0 && r0[1] > 0) { g.strokeStyle = css("--faint"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(pad.l, Y(0, r0)); g.lineTo(w - pad.r, Y(0, r0)); g.stroke(); g.setLineDash([]); }
+    } else {
+      g.fillStyle = css("--faint"); g.textAlign = "center"; g.fillText("waiting for data…", w / 2, h / 2);
+    }
+    if (this.x.length > 1) {
+      g.fillStyle = css("--faint"); g.textAlign = "center";
+      const span = (this.x[this.x.length - 1] - this.x[0]);
+      [0, 0.5, 1].forEach(f => { const i = Math.round((this.x.length - 1) * f); g.fillText(f === 1 ? "now" : (this.o.xfmt || (v => "−" + Math.round(v) + " s"))(span * (1 - f)), X(i), h - 6); });
+    }
+    for (const s of this.series) {
+      const r = (s.axis || 0) === 1 ? r1 : r0; if (!r) continue;
+      const col = css(s.color);
+      if (s.fill) {
+        g.beginPath(); let started = false, lastX = 0;
+        s.data.forEach((v, i) => { if (v === null || !isFinite(v)) return; const xx = X(i), yy = Y(v, r); if (!started) { g.moveTo(xx, Y(r[0], r)); g.lineTo(xx, yy); started = true; } else g.lineTo(xx, yy); lastX = xx; });
+        if (started) { g.lineTo(lastX, Y(r[0], r)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = col; g.fill(); g.globalAlpha = 1; }
+      }
+      g.strokeStyle = col; g.lineWidth = s.width || 1.6; g.beginPath(); let pen = false;
+      s.data.forEach((v, i) => { if (v === null || !isFinite(v)) { pen = false; return; } const xx = X(i), yy = Y(v, r); pen ? g.lineTo(xx, yy) : g.moveTo(xx, yy); pen = true; });
+      g.stroke();
+      const li = s.data.length - 1;
+      if (li >= 0 && s.data[li] !== null && isFinite(s.data[li])) { g.fillStyle = col; g.beginPath(); g.arc(X(li), Y(s.data[li], r), 3, 0, 7); g.fill(); }
+    }
+    if (this.hover !== null && this.x.length > 1 && r0) {
+      const i = Math.max(0, Math.min(this.x.length - 1, Math.round((this.hover - pad.l) / (w - pad.l - pad.r) * (n - 1))));
+      const xx = X(i);
+      g.strokeStyle = css("--faint"); g.beginPath(); g.moveTo(xx, pad.t); g.lineTo(xx, h - pad.b); g.stroke();
+      const rows = this.series.map(s => [s.name, s.data[i], s.color, s.axis]).filter(r => r[1] !== null && r[1] !== undefined && isFinite(r[1]));
+      rows.unshift(["", "−" + (this.x[this.x.length - 1] - this.x[i]).toFixed(1) + " s", "--muted"]);
+      const bw = 190, bh = 8 + rows.length * 17, bx = xx + 12 + bw > w ? xx - 12 - bw : xx + 12;
+      g.fillStyle = css("--surface"); g.strokeStyle = css("--line"); g.beginPath(); g.roundRect(bx, pad.t, bw, bh, 6); g.fill(); g.stroke();
+      rows.forEach((r, k) => {
+        const y = pad.t + 17 + k * 17; g.textAlign = "left"; g.fillStyle = css(r[2]); g.fillText(r[0], bx + 8, y);
+        g.textAlign = "right"; g.fillStyle = css("--ink");
+        const f = typeof r[1] === "string" ? r[1] : (r[3] === 1 ? (this.o.fmtR || (x => x.toFixed(3))) : (this.o.fmt || (x => x.toFixed(2))))(r[1]);
+        g.fillText(f, bx + bw - 8, y);
+      });
+    }
+  }
+}
+
+const chPrice = new LineChart($("ch-price"), { fmt: v => pxf(v) });
+const chPnl = new LineChart($("ch-pnl"), { right: true, zero: true, fmt: v => v.toFixed(3), fmtR: v => v.toFixed(info ? info.qty_decimals : 3) });
+const chLat = new LineChart($("ch-lat"), { fmt: v => ns(Math.round(v)), padL: 72 });
+
+function drawDepth() {
+  const c = $("ch-depth"); if (!c.offsetParent || !snap) return;
+  const st = snap.stats, dpr = devicePixelRatio || 1, w = c.clientWidth, h = baseH(c);
+  c.style.height = h + "px"; c.width = w * dpr; c.height = h * dpr;
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const bids = st.bids.filter(l => l[1] > 0), asks = st.asks.filter(l => l[1] > 0);
+  if (!bids.length || !asks.length) return;
+  let cb = 0; const B = bids.map(l => [l[0], cb += l[1]]);
+  let ca = 0; const A = asks.map(l => [l[0], ca += l[1]]);
+  const lo = B[B.length - 1][0], hi = A[A.length - 1][0], maxQ = Math.max(cb, ca);
+  const pad = { l: 12, r: 12, t: 10, b: 24 };
+  const X = p => pad.l + (w - pad.l - pad.r) * (p - lo) / Math.max(1, hi - lo);
+  const Y = q => pad.t + (h - pad.t - pad.b) * (1 - q / maxQ);
+  const side = (pts, col, dir) => {
+    g.beginPath(); g.moveTo(X(pts[0][0]), Y(0));
+    pts.forEach(([p, q], i) => { g.lineTo(X(p), Y(i ? pts[i - 1][1] : 0)); g.lineTo(X(p), Y(q)); });
+    g.lineTo(X(pts[pts.length - 1][0]), Y(0)); g.closePath();
+    g.globalAlpha = 0.18; g.fillStyle = css(col); g.fill(); g.globalAlpha = 1; g.strokeStyle = css(col); g.lineWidth = 1.6; g.stroke();
+  };
+  side(B, "--bid"); side(A, "--ask");
+  g.font = "11px 'IBM Plex Mono', monospace"; g.fillStyle = css("--muted");
+  g.textAlign = "left"; g.fillText(px(lo), pad.l, h - 6); g.textAlign = "right"; g.fillText(px(hi), w - pad.r, h - 6);
+  g.textAlign = "center"; g.fillText("mid " + px((st.best_bid + st.best_ask) / 2), w / 2, h - 6);
+  g.textAlign = "left"; g.fillText("max cumulative " + qty(maxQ), pad.l, pad.t + 10);
+}
+
+function drawHist() {
+  const c = $("ch-hist"); if (!c.offsetParent || !snap) return;
+  const b = snap.t2o_buckets || [], dpr = devicePixelRatio || 1, w = c.clientWidth, h = baseH(c);
+  c.style.height = h + "px"; c.width = w * dpr; c.height = h * dpr;
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  let last = b.length - 1; while (last > 0 && !b[last][1]) last--;
+  let first = 0; while (first < last && !b[first][1]) first++;
+  const rows = b.slice(Math.max(0, first - 1), last + 2);
+  const maxC = Math.max(1, ...rows.map(r => r[1]));
+  const pad = { l: 40, r: 10, t: 12, b: 34 }, bw = (w - pad.l - pad.r) / Math.max(1, rows.length);
+  g.font = "10.5px 'IBM Plex Mono', monospace";
+  g.strokeStyle = css("--line");
+  for (let i = 0; i <= 3; i++) { const y = pad.t + (h - pad.t - pad.b) * i / 3; g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke(); g.fillStyle = css("--muted"); g.textAlign = "right"; g.fillText(Math.round(maxC * (1 - i / 3)), pad.l - 6, y + 4); }
+  rows.forEach((r, i) => {
+    const bh = (h - pad.t - pad.b) * r[1] / maxC, x = pad.l + i * bw;
+    g.fillStyle = css("--accent"); g.globalAlpha = r[1] ? 0.85 : 0.2; g.fillRect(x + 2, h - pad.b - bh, bw - 4, bh); g.globalAlpha = 1;
+    if (i % 2 === 0) { g.fillStyle = css("--muted"); g.textAlign = "center"; g.fillText("<" + ns(r[0]).replace(" ", ""), x + bw / 2, h - pad.b + 14); }
+  });
+  g.fillStyle = css("--faint"); g.textAlign = "center"; g.fillText("orders per latency bucket (bucket upper bound)", w / 2, h - 4);
+}
+
+function drawQuoteLine() {
+  const c = $("ch-quote"); if (!c.offsetParent || !snap) return;
+  const st = snap.stats, dpr = devicePixelRatio || 1, w = c.clientWidth, h = baseH(c);
+  c.style.height = h + "px"; c.width = w * dpr; c.height = h * dpr;
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const names = info.strat_fields, d = st.strat;
+  const get = k => { const i = names.indexOf(k); return i >= 0 ? d[i] : null; };
+  const mid = (st.best_bid + st.best_ask) / 2;
+  if (!st.best_bid || !st.best_ask) return;
+  const pts = [
+    ["best bid", st.best_bid, "--bid", 0], ["best ask", st.best_ask, "--ask", 0],
+    ["microprice", get("microprice"), "--muted", 1], ["reservation", get("reservation"), "--warn", 2],
+    ["target bid", get("target_bid") || null, "--bid", 3], ["target ask", get("target_ask") || null, "--ask", 3],
+    ["our bid", st.our_bid || null, "--accent", 4], ["our ask", st.our_ask || null, "--accent", 4],
+  ].filter(p => p[1]);
+  const offs = pts.map(p => p[1] - mid), span = Math.max(3, ...offs.map(Math.abs)) * 1.15;
+  const pad = Math.min(170, w * 0.2), X = o => w / 2 + (w / 2 - pad) * o / span, rowY = [30, 60, 90, 120, 150];
+  g.strokeStyle = css("--line"); g.lineWidth = 1;
+  g.beginPath(); g.moveTo(pad, h - 12); g.lineTo(w - pad, h - 12); g.stroke();
+  g.font = "10.5px 'IBM Plex Mono', monospace"; g.fillStyle = css("--faint"); g.textAlign = "center";
+  [-span, -span / 2, 0, span / 2, span].forEach(o => g.fillText((o > 0 ? "+" : "") + o.toFixed(Math.abs(span) < 10 ? 1 : 0) + "t", X(o), h - 1));
+  g.strokeStyle = css("--faint"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(0), 8); g.lineTo(X(0), h - 14); g.stroke(); g.setLineDash([]);
+  g.fillStyle = css("--muted"); g.fillText("mid", X(0), 12);
+  pts.forEach(([name, v, col, row]) => {
+    const x = X(v - mid), y = rowY[row];
+    g.fillStyle = css(col); g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill();
+    g.font = "11.5px 'IBM Plex Sans', sans-serif"; g.textAlign = v - mid < 0 ? "right" : "left";
+    g.fillText(name + " " + (row === 1 || row === 2 ? pxf(v * info.tick_size) : px(v)), x + (v - mid < 0 ? -9 : 9), y + 4);
+  });
+}
+
+function redrawAll() {
+  [chPrice, chPnl, chLat, chKline].forEach(c => c && c.draw());
+  drawDepth(); drawHist(); drawQuoteLine();
+}
+addEventListener("resize", () => redrawAll());
+
+/* ---------------- render: engine snapshot ---------------- */
+function renderHeader(s) {
+  const st = s.stats;
+  $("c-mode").textContent = info.mode;
+  $("c-sym").textContent = info.symbol;
+  $("c-strat").textContent = info.strategy.replace("_", " ");
+  const feedOn = info.mode_key === "live";
+  $("c-feed").hidden = !feedOn;
+  if (feedOn) {
+    const f = Object.fromEntries(s.feed);
+    $("c-feed").className = "chip " + (f.connected ? "ok" : "bad");
+    $("c-feed-name").textContent = info.venue;
+  }
+  killed = st.killed;
+  for (const id of ["kill", "kill2"]) {
+    const b = $(id);
+    b.textContent = killed ? "Resume trading" : (killArmed ? "Confirm: cancel all?" : "Kill switch");
+    b.className = "btn " + (killed ? "resume" : "kill" + (killArmed ? " armed" : ""));
+  }
+}
+
+function renderKpis(s) {
+  const st = s.stats, t = st.trades[0];
+  if (t && t.ts_ns) {
+    $("k-last").textContent = px(t.price);
+    const t2 = st.trades.find((x, i) => i > 0 && x.ts_ns && x.price !== t.price);
+    $("k-lastdir").innerHTML = t2 ? (t.price > t2.price ? '<span class="up">▲ up-tick</span>' : '<span class="down">▼ down-tick</span>') : "";
+  }
+  $("k-bbo").innerHTML = st.best_bid ? `<span class="up">${px(st.best_bid)}</span><br><span class="down">${px(st.best_ask)}</span>` : "—";
+  const spr = st.best_ask - st.best_bid;
+  $("k-spread").textContent = st.best_bid ? `spread ${spr} tick${spr === 1 ? "" : "s"} · ${pxf(spr * info.tick_size)}` : "spread —";
+  $("k-pnl").textContent = st.pnl.toFixed(4); $("k-pnl").className = "v " + (st.pnl > 0 ? "up" : st.pnl < 0 ? "down" : "");
+  $("k-pos").textContent = qty(st.position_lots);
+  $("k-posh").textContent = st.position_lots > 0 ? "long, we own inventory" : st.position_lots < 0 ? "short, we owe inventory" : "flat, no inventory";
+  $("k-fills").textContent = num(st.fills);
+  $("k-fillsh").textContent = st.fills ? `${Math.round(100 * st.maker_fills / st.fills)}% maker · vol ${qty(st.volume_lots)}` : "no fills yet";
+  $("k-md").textContent = num(Math.round(s.md_rate));
+  $("k-t2o").textContent = ns(s.tick_to_order.p50);
+}
+
+function renderStory(s) {
+  const st = s.stats, d = st.strat, names = info.strat_fields;
+  const g = k => { const i = names.indexOf(k); return i >= 0 ? d[i] : null; };
+  const parts = [];
+  const src = info.mode_key === "live" ? `live <b>${esc(info.symbol)}</b> market data from ${esc(info.venue)}` : info.mode_key === "sim" ? `a simulated <b>${esc(info.symbol)}</b> market generated locally by the built-in simulator` : "a recorded session";
+  parts.push(`The engine is running the <b>${esc(info.strategy.replace("_", " "))}</b> strategy on ${src}, processing <b>${num(Math.round(s.md_rate))}</b> market-data messages per second.`);
+  if (st.best_bid) parts.push(`The market is <span class="px">${px(st.best_bid)}</span> bid and <span class="px">${px(st.best_ask)}</span> offered, a spread of ${st.best_ask - st.best_bid} tick${st.best_ask - st.best_bid === 1 ? "" : "s"}.`);
+  if (killed) parts.push(`<b class="down">The kill switch is on.</b> All orders were cancelled and new orders are blocked until you resume.`);
+  else if (info.strategy === "market_maker" && g("microprice")) {
+    const q = [];
+    if (st.our_bid) q.push(`buying at <span class="px">${px(st.our_bid)}</span>`);
+    if (st.our_ask) q.push(`selling at <span class="px">${px(st.our_ask)}</span>`);
+    parts.push(`Its fair value (microprice) is <span class="px">${pxf(g("microprice") * info.tick_size)}</span>` +
+      (Math.abs(g("inventory_ratio")) > 0.01 ? `, shifted to <span class="px">${pxf(g("reservation") * info.tick_size)}</span> because inventory is ${Math.round(Math.abs(g("inventory_ratio")) * 100)}% of the limit` : "") +
+      `. ${q.length ? "It is currently " + q.join(" and ") + ", each order " + esc(info.params[0][1]) + "." : "It has no quote resting right now, usually because one is being replaced."}`);
+  } else if (info.strategy === "imbalance_taker") {
+    parts.push(`Top-of-book imbalance is <b>${(g("imbalance") || 0).toFixed(2)}</b>. It will cross the spread when this goes beyond ±${(g("threshold") || 0).toFixed(2)}.`);
+  }
+  parts.push(st.position_lots === 0 ? `Position is flat.` : `Position is <b>${st.position_lots > 0 ? "long" : "short"} ${qty(Math.abs(st.position_lots))}</b>.`);
+  parts.push(`So far: ${num(st.orders_sent)} orders sent, ${num(st.cancels_sent)} cancelled, <b>${num(st.fills)} fills</b>, net PnL <b class="${st.pnl >= 0 ? "up" : "down"}">${st.pnl.toFixed(4)}</b>.`);
+  if (s.tick_to_order.count) parts.push(`Median reaction time from market data to order is <b>${ns(s.tick_to_order.p50)}</b> (p99 ${ns(s.tick_to_order.p99)}).`);
+  if (info.mode_key === "live") parts.push(`Fills are simulated (paper execution); no orders are sent to ${esc(info.venue)}.`);
+  $("story").innerHTML = parts.join(" ");
+}
+
+const stageDefs = [
+  ["Market data", "md_msgs", "Messages in from the feed adapter or simulator", "feed / venue thread"],
+  ["Order book", "book_batches", "Consistent book states the strategy was shown", "engine thread"],
+  ["Strategy", "orders_sent", "Decisions that became a new order (after risk)", "engine thread"],
+  ["Risk", "risk_rejects", "Orders blocked by a pre-trade limit", "engine thread"],
+  ["OMS", "cancels_sent", "Cancels sent to keep quotes fresh", "engine thread"],
+  ["Venue", "fills", "Our orders that traded", "venue / paper"],
+];
+$("pipe").innerHTML = stageDefs.map((d, i) => `<div class="stage" id="stg-${i}"><div class="n">${i + 1}</div><div class="t">${d[0]}</div><div class="c" id="stc-${i}">0</div><div class="d">${d[2]}</div><div class="thread">${d[3]}</div></div>`).join("");
+function renderPipe(st) {
+  stageDefs.forEach((d, i) => {
+    const v = st[d[1]], el = $("stg-" + i);
+    $("stc-" + i).textContent = num(v);
+    if (prevStats && prevStats[d[1]] !== v) { el.classList.add("flash"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("flash"), 350); }
+  });
+}
+
+function ladderRows(st, n) {
+  const asks = st.asks.filter(l => l[1] > 0).slice(0, n).reverse(), bids = st.bids.filter(l => l[1] > 0).slice(0, n);
+  const maxQ = Math.max(1, ...asks.map(l => l[1]), ...bids.map(l => l[1]));
+  const row = (cls, [p, q], ours) => `<tr class="${cls}${ours ? " ours" : ""}"><td class="p"><span>${px(p)}</span></td><td class="n"><span class="bar" style="width:${(100 * q / maxQ).toFixed(0)}%"></span><span>${qty(q)}</span></td></tr>`;
+  const spr = st.best_ask - st.best_bid;
+  return `<thead><tr><th>Price</th><th class="n">Size</th></tr></thead><tbody>` +
+    asks.map(l => row("a", l, l[0] === st.our_ask)).join("") +
+    `<tr class="mid"><td colspan="2">spread ${spr} tick${spr === 1 ? "" : "s"} · mid ${px((st.best_bid + st.best_ask) / 2)}</td></tr>` +
+    bids.map(l => row("b", l, l[0] === st.our_bid)).join("") + `</tbody>`;
+}
+
+function tapeRows(st, n) {
+  const rows = st.trades.filter(t => t.ts_ns).slice(0, n);
+  if (!rows.length) return `<tbody><tr><td class="empty">No trades yet</td></tr></tbody>`;
+  return `<thead><tr><th>Time</th><th>Aggressor</th><th class="n">Price</th><th class="n">Size</th></tr></thead><tbody>` +
+    rows.map(t => `<tr><td class="m">${tsLabel(t.ts_ns)}</td><td>${pill(sideName(t.side), sideName(t.side))}</td><td class="n ${t.side === 0 ? "up" : "down"}">${px(t.price)}</td><td class="n">${qty(t.qty)}</td></tr>`).join("") + `</tbody>`;
+}
+
+function renderBook(st) {
+  $("mini-book").innerHTML = ladderRows(st, 8);
+  $("mini-tape").innerHTML = tapeRows(st, 10);
+  if (activeTab !== "book") return;
+  $("full-book").innerHTML = ladderRows(st, 20);
+  $("tape").innerHTML = tapeRows(st, 24);
+  const b = st.bids.filter(l => l[1] > 0), a = st.asks.filter(l => l[1] > 0);
+  const sum = (arr, k) => arr.slice(0, k).reduce((x, l) => x + l[1], 0);
+  const imb = k => { const bb = sum(b, k), aa = sum(a, k); return bb + aa ? (bb - aa) / (bb + aa) : 0; };
+  const micro = b[0] && a[0] ? (b[0][0] * a[0][1] + a[0][0] * b[0][1]) / (b[0][1] + a[0][1]) : null;
+  $("book-stats").innerHTML = [
+    ["Levels held", `${b.length} bids · ${a.length} asks`],
+    ["Top-level sizes", b[0] ? `${qty(b[0][1])} / ${qty(a[0][1])}` : "—"],
+    ["Imbalance, top 1 / 5 levels", `${imb(1).toFixed(2)} / ${imb(5).toFixed(2)}  (+ = more bids)`],
+    ["Microprice", micro ? pxf(micro * info.tick_size) : "—"],
+    ["Visible bid depth", qty(sum(b, 99))], ["Visible ask depth", qty(sum(a, 99))],
+  ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  const tr = st.trades.filter(t => t.ts_ns);
+  const bv = tr.filter(t => t.side === 0).reduce((x, t) => x + t.qty, 0), sv = tr.filter(t => t.side === 1).reduce((x, t) => x + t.qty, 0);
+  const tot = Math.max(1, bv + sv);
+  $("flow-meters").innerHTML = meter("Buy aggressor volume", qty(bv), bv / tot, "", "Buyers lifting the ask") + meter("Sell aggressor volume", qty(sv), sv / tot, "x", "Sellers hitting the bid");
+}
+
+function meter(label, val, frac, cls, hint) {
+  const f = Math.max(0, Math.min(1, frac || 0));
+  const c = cls !== undefined && cls !== "" ? cls : f > 0.9 ? "x" : f > 0.7 ? "w" : "";
+  return `<div class="meter"><div class="top2"><b>${esc(label)}</b><span class="val">${val}</span></div><div class="track"><div class="fill ${c}" style="width:${(f * 100).toFixed(1)}%"></div></div>${hint ? `<div class="hint">${hint}</div>` : ""}</div>`;
+}
+
+const DIAG_HELP = {
+  mid: ["Mid", "Halfway between best bid and best ask.", "px"],
+  microprice: ["Microprice (fair value)", "Mid weighted by top-of-book sizes. The strategy's view of the true price.", "px"],
+  reservation: ["Reservation price", "Fair value shifted against our inventory. Quotes are centred here.", "px"],
+  half_spread: ["Half-spread", "Distance from reservation to each quote: base plus volatility term.", "ticks"],
+  volatility: ["Volatility (σ)", "Recent standard deviation of mid changes per update, smoothed.", "ticks"],
+  inventory_ratio: ["Inventory ratio", "Position ÷ max inventory. ±1 means the limit is reached.", "ratio"],
+  target_bid: ["Target bid", "Where the strategy wants its buy order. 0 = not quoting that side.", "tickpx"],
+  target_ask: ["Target ask", "Where the strategy wants its sell order.", "tickpx"],
+  imbalance: ["Imbalance", "(bid size − ask size) ÷ total over the top 3 levels.", "ratio"],
+  threshold: ["Threshold", "Imbalance needed before the strategy crosses the spread.", "ratio"],
+  cooldown_ms: ["Cooldown", "Minimum time between orders.", "ms"],
+};
+const STRAT_DESC = {
+  market_maker: `<p>A <b>market maker</b> keeps a buy order just below the market and a sell order just above it, and earns the difference when both fill. This one follows the Avellaneda–Stoikov model (2008):</p>
+  <ul><li><b>Fair value</b> is the microprice, which leans toward the thinner side of the book.</li>
+  <li><b>Reservation price</b> = fair value − inventory ratio × skew. When we're long, both quotes move down, so we sell more readily and buy less.</li>
+  <li><b>Half-spread</b> = base + volatility × multiplier. Quotes widen when the market moves fast, which is when fills are most dangerous.</li>
+  <li>Orders are <b>post-only</b>, so they never pay the spread. They're replaced only when the target moves by at least the requote threshold, which keeps queue priority and stays inside rate limits.</li></ul>`,
+  imbalance_taker: `<p>An <b>imbalance taker</b> crosses the spread when the top of the book is heavily one-sided, betting that the price moves toward the thin side. It uses IOC orders, flattens when the signal fades, and waits a cooldown between trades.</p>`,
+};
+function renderStrategy(st) {
+  if (activeTab !== "strategy") return;
+  $("st-title").textContent = "Strategy: " + info.strategy.replace("_", " ");
+  $("st-sub").textContent = "Runs inside the engine thread, called once per consistent book update";
+  if (!$("st-desc").dataset.done) { $("st-desc").innerHTML = STRAT_DESC[info.strategy] || ""; $("st-desc").dataset.done = 1; }
+  $("diag").innerHTML = info.strat_fields.map((k, i) => {
+    const [label, help, unit] = DIAG_HELP[k] || [k, "", ""]; const v = st.strat[i];
+    const val = unit === "px" ? pxf(v * info.tick_size) : unit === "tickpx" ? (v ? px(v) : "not quoting") : unit === "ticks" ? v.toFixed(2) + " ticks" : unit === "ms" ? v.toFixed(0) + " ms" : v.toFixed(3);
+    return `<div class="it"><div class="k">${esc(label)}</div><div class="v">${val}</div><div class="d">${esc(help)}</div></div>`;
+  }).join("");
+  $("params").innerHTML = `<thead><tr><th>Parameter</th><th>Value</th><th>What it does</th></tr></thead><tbody>` +
+    info.params.map(p => `<tr><td><b>${esc(p[0])}</b></td><td class="m">${esc(p[1])}</td><td>${esc(p[2])}</td></tr>`).join("") + `</tbody>`;
+  drawQuoteLine();
+}
+
+function renderOrders(s) {
+  if (activeTab !== "orders") return;
+  const st = s.stats;
+  const cr = st.orders_sent ? st.cancels_sent / st.orders_sent : 0, fr = st.orders_sent ? st.fills / st.orders_sent : 0;
+  $("order-kpis").innerHTML = [
+    ["Orders sent", num(st.orders_sent), `${s.order_rate.toFixed(1)} per second`],
+    ["Cancels sent", num(st.cancels_sent), `${(cr * 100).toFixed(0)}% of orders cancelled`],
+    ["Fills", num(st.fills), `${(fr * 100).toFixed(0)}% fill ratio`],
+    ["Maker share", st.fills ? Math.round(100 * st.maker_fills / st.fills) + "%" : "—", "fills where we provided liquidity"],
+    ["Open quantity", `<span class="up">${qty(st.open_buy_qty)}</span><br><span class="down">${qty(st.open_sell_qty)}</span>`, "working buy / sell size"],
+    ["Fees paid", st.fees.toFixed(4), "quote currency"],
+    ["Venue rejects", num(st.venue_rejects), "e.g. post-only would have crossed"],
+  ].map(([l, v, h]) => `<div class="panel kpi"><div class="l">${l}</div><div class="v"${String(v).includes("<br>") ? ' style="font-size:14.5px;white-space:normal;line-height:1.35"' : ""}>${v}</div><div class="h">${h}</div></div>`).join("");
+  const STAT = [["pending new", "warn"], ["live", "buy"], ["pending cancel", "mute"]];
+  const os = st.orders.filter(o => o.cl_id);
+  $("orders").innerHTML = os.length ? `<thead><tr><th>ID</th><th>Side</th><th class="n">Price</th><th class="n">Leaves / qty</th><th>Status</th><th class="n">Age</th></tr></thead><tbody>` +
+    os.map(o => `<tr><td class="m">#${o.cl_id}</td><td>${pill(sideName(o.side), sideName(o.side))}</td><td class="n">${px(o.price)}</td><td class="n">${qty(o.leaves)} / ${qty(o.qty)}</td><td>${pill(STAT[o.status][1], STAT[o.status][0])}</td><td class="n">${ns(o.age_ns)}</td></tr>`).join("") + `</tbody>`
+    : `<tbody><tr><td class="empty">No working orders${killed ? " (kill switch on)" : ""}</td></tr></tbody>`;
+  const fs = st.fills_recent.filter(f => f.ts_ns);
+  const midNow = st.best_bid && st.best_ask ? (st.best_bid + st.best_ask) / 2 : null;
+  $("fills").innerHTML = fs.length ? `<thead><tr><th>When</th><th>Side</th><th class="n">Price</th><th class="n">Size</th><th>Type</th><th class="n">Markout now</th></tr></thead><tbody>` +
+    fs.map(f => {
+      const mo = midNow === null ? null : (f.side === 0 ? 1 : -1) * (midNow - f.price);
+      return `<tr><td class="m">${tsLabel(f.ts_ns)}</td><td>${pill(sideName(f.side), sideName(f.side))}</td><td class="n">${px(f.price)}</td><td class="n">${qty(f.qty)}</td><td>${pill(f.maker ? "info" : "warn", f.maker ? "maker" : "taker")}</td><td class="n ${mo > 0 ? "up" : mo < 0 ? "down" : ""}">${mo === null ? "—" : (mo > 0 ? "+" : "") + mo.toFixed(1) + " t"}</td></tr>`;
+    }).join("") + `</tbody>` : `<tbody><tr><td class="empty">No fills yet. Fills appear when the market trades through our quotes.</td></tr></tbody>`;
+}
+
+function limitVal(name) { const l = info.limits.find(x => x[0] === name); return l ? parseFloat(l[1]) : NaN; }
+function renderRisk(s) {
+  if (activeTab !== "risk") return;
+  const st = s.stats;
+  const maxPos = limitVal("max position"), maxOpen = limitVal("max open orders"), maxRate = limitVal("max orders / second"), maxLoss = limitVal("max loss (kill switch)");
+  const posL = st.position_lots * info.lot_size, worstB = (st.position_lots + st.open_buy_qty) * info.lot_size, worstS = (st.position_lots - st.open_sell_qty) * info.lot_size;
+  const worst = Math.max(Math.abs(worstB), Math.abs(worstS));
+  $("meters").innerHTML =
+    meter("Position (worst case incl. open orders)", `${worst.toFixed(info.qty_decimals)} / ${maxPos}`, worst / maxPos, undefined, `Current position ${posL.toFixed(info.qty_decimals)}. Worst case if all buys fill: ${worstB.toFixed(info.qty_decimals)}; if all sells fill: ${worstS.toFixed(info.qty_decimals)}.`) +
+    meter("Open orders", `${st.open_orders} / ${maxOpen}`, st.open_orders / maxOpen, undefined, "A market maker normally has two: one bid, one ask.") +
+    meter("Order rate", `${s.order_rate.toFixed(1)} / ${maxRate} per s`, s.order_rate / maxRate, undefined, "The strategy throttles itself well below this limit.") +
+    meter("Loss vs max loss", `${Math.max(0, -st.pnl).toFixed(4)} / ${maxLoss}`, Math.max(0, -st.pnl) / maxLoss, undefined, "The kill switch trips automatically at 100%.");
+  $("kill-state").innerHTML = killed ? `<b class="down">ON.</b> All orders cancelled; new orders blocked.` : `<b class="up">Off.</b> Trading normally.`;
+  const rr = st.rejects_by_reason, tot = rr.reduce((a, b) => a + b, 0);
+  $("rejects").innerHTML = `<thead><tr><th>Reason</th><th class="n">Count</th><th>Meaning</th></tr></thead><tbody>` + info.reject_reasons.map((r, i) => `<tr><td>${esc(r)}</td><td class="n">${num(rr[i])}</td><td style="color:var(--muted)">${esc(REJ_HELP[i])}</td></tr>`).join("") + `<tr><td><b>Total</b></td><td class="n"><b>${num(tot)}</b></td><td></td></tr></tbody>`;
+  $("limits").innerHTML = `<tbody>` + info.limits.map(l => `<tr><td>${esc(l[0])}</td><td class="n">${esc(l[1])}</td></tr>`).join("") + `</tbody>`;
+}
+const REJ_HELP = ["Order larger than the per-order cap", "Would take worst-case position past the limit", "Price too far from mid: protects against bad prices", "More orders in one second than allowed", "Too many orders working at once", "Kill switch is on", "No valid book yet to check prices against", "Anything else"];
+
+const LAT_HELP = {
+  tick_to_order: ["Tick → order", "Market data received → order handed to the gateway. The core number: book update + strategy + risk + OMS."],
+  md_process: ["Engine pass", "Time the engine spends on one market-data message, from pop to done."],
+  md_queue: ["Ring hop", "Time a message waited in the ring between the feed or simulator thread and the engine."],
+  order_ack: ["Order → ack", "Round trip to the venue. In the simulator this includes the configured wire latency; paper fills are instant."],
+};
+function renderLatency(s) {
+  push("p50", s.tick_to_order.p50 || null); push("p99", s.tick_to_order.p99 || null);
+  if (activeTab !== "latency") return;
+  $("lat").innerHTML = `<thead><tr><th>Path</th><th class="n">Count</th><th class="n">p50</th><th class="n">p90</th><th class="n">p99</th><th class="n">p99.9</th><th class="n">Max</th><th>What it measures</th></tr></thead><tbody>` +
+    Object.entries(LAT_HELP).map(([k, [n, h]]) => { const l = s[k]; return `<tr><td><b>${n}</b></td><td class="n">${num(l.count)}</td><td class="n">${ns(l.p50)}</td><td class="n">${ns(l.p90)}</td><td class="n">${ns(l.p99)}</td><td class="n">${ns(l.p999)}</td><td class="n">${ns(l.max)}</td><td style="color:var(--muted);min-width:260px">${h}</td></tr>`; }).join("") + `</tbody>`;
+  chLat.set([{ name: "p50", data: H.p50, color: "--accent", width: 2 }, { name: "p99", data: H.p99, color: "--warn" }], H.t);
+  drawHist();
+}
+
+function renderData(s) {
+  if (activeTab !== "data") return;
+  $("ds-src").textContent = `${info.venue} · ${info.asset_class} · ${info.source}`;
+  $("ds-venue").textContent = info.venue;
+  $("ds-streams").innerHTML = `<thead><tr><th>Stream</th><th>What it carries</th></tr></thead><tbody>` +
+    info.streams.map(([n, d]) => `<tr><td class="m">${esc(n)}</td><td>${esc(d)}</td></tr>`).join("") + `</tbody>`;
+  const F = { connected: "Connected", frames: "Frames received", messages: "Frames with market data", reconnects: "Reconnects", parse_errors: "Parse errors", dropped: "Dropped (engine too slow)", venue_to_local_ns: "Venue timestamp → received" };
+  $("ds-feed").innerHTML = s.feed.length ? s.feed.map(([k, v]) => {
+    const label = F[k] || (k.startsWith("frames:") ? "  frames: " + k.slice(7) : k);
+    const val = k === "connected" ? (v ? '<span class="up">yes</span>' : '<span class="down">no</span>') : k.endsWith("_ns") ? ns(v) + " *" : num(v);
+    return `<dt>${esc(label)}</dt><dd>${val}</dd>`;
+  }).join("") + `<dt style="grid-column:1/-1;font-size:11.5px">* includes network delay and any offset between the venue's clock and this machine's.</dt>`
+    : `<dt>Mode</dt><dd>${esc(info.mode)}</dd><dt>MD messages</dt><dd>${num(s.stats.md_msgs)}</dd><dt>Sequence gaps</dt><dd>${num(s.stats.md_gaps)}</dd>`;
+  const raw = s.raw || [];
+  $("ds-raw").innerHTML = raw.length ? raw.map(([k, t]) => `<div style="margin-bottom:12px"><div class="m" style="font-weight:600;margin-bottom:4px">${esc(k)}</div><pre class="cmd" style="white-space:pre-wrap;word-break:break-all;margin:0">${esc(t.length > 700 ? t.slice(0, 700) + " …" : t)}</pre></div>`).join("")
+    : `<p class="empty">Raw frames appear here when a network adapter is running.</p>`;
+}
+
+function push(k, v) { H[k].push(v); if (H[k].length > MAXH) H[k].shift(); }
+function render(s) {
+  snap = s; info = s.info;
+  pxFmt = new Intl.NumberFormat("en-US", { minimumFractionDigits: info.price_decimals, maximumFractionDigits: info.price_decimals });
+  qtyFmt = new Intl.NumberFormat("en-US", { minimumFractionDigits: info.qty_decimals, maximumFractionDigits: info.qty_decimals });
+  const st = s.stats;
+  push("t", s.uptime_s);
+  const mid = st.best_bid && st.best_ask ? (st.best_bid + st.best_ask) / 2 * info.tick_size : null;
+  push("mid", mid); push("ob", st.our_bid ? st.our_bid * info.tick_size : null); push("oa", st.our_ask ? st.our_ask * info.tick_size : null);
+  push("pnl", st.pnl); push("pos", st.position_lots * info.lot_size);
+  renderHeader(s); renderKpis(s); renderStory(s); renderPipe(st); renderBook(st);
+  renderStrategy(st); renderOrders(s); renderRisk(s); renderLatency(s); renderData(s);
+  if (activeTab === "overview") {
+    chPrice.set([{ name: "mid", data: H.mid, color: "--muted", width: 1.8 }, { name: "our bid", data: H.ob, color: "--bid" }, { name: "our ask", data: H.oa, color: "--ask" }], H.t);
+    chPnl.set([{ name: "PnL", data: H.pnl, color: "--accent", width: 2, fill: true }, { name: "position", data: H.pos, color: "--warn", axis: 1 }], H.t);
+  }
+  if (activeTab === "book") drawDepth();
+  prevStats = st;
+}
+
+/* ---------------- kill switch ---------------- */
+function killClick() {
+  if (killed) { fetch("/api/unkill", { method: "POST" }); killArmed = false; return; }
+  if (!killArmed) { killArmed = true; setTimeout(() => { killArmed = false; }, 4000); if (snap) renderHeader(snap); return; }
+  fetch("/api/kill", { method: "POST" }); killArmed = false;
+}
+$("kill").onclick = killClick; $("kill2").onclick = killClick;
+
+/* ---------------- engine connection ---------------- */
+(function connect() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => { $("c-engine").className = "chip ok"; };
+  ws.onmessage = e => render(JSON.parse(e.data));
+  ws.onclose = () => { $("c-engine").className = "chip bad"; $("story").textContent = "Lost connection to the engine. Is tickrail still running? Retrying every second…"; setTimeout(connect, 1000); };
+})();
+
+/* ---------------- Market explorer (browser → Binance public API directly) ---------------- */
+const BWS = "wss://data-stream.binance.vision/ws/!miniTicker@arr", BREST = "https://data-api.binance.vision/api/v3";
+const mkt = new Map(); let selSym = "BTCUSDT", chKline = null, klineTimer = null;
+const QUOTES = ["USDT", "FDUSD", "USDC", "BTC", "ETH", "BNB", "EUR", "TRY", "BRL", "JPY"];
+function mpx(v) { const a = Math.abs(v); const d = a >= 1000 ? 2 : a >= 1 ? 4 : a >= 0.01 ? 6 : 8; return v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }); }
+function big(v) { return v >= 1e9 ? (v / 1e9).toFixed(2) + "B" : v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(1) + "K" : v.toFixed(0); }
+function upd(t) { const c = +t.c, o = +t.o; mkt.set(t.s, { s: t.s, c, o, h: +t.h, l: +t.l, v: +t.v, q: +t.q, chg: o ? (c - o) / o * 100 : 0 }); }
+fetch(`${BREST}/ticker/24hr?type=MINI`).then(r => r.json()).then(a => { a.forEach(t => upd({ s: t.symbol, c: t.lastPrice, o: t.openPrice, h: t.highPrice, l: t.lowPrice, v: t.volume, q: t.quoteVolume })); renderMarkets(); }).catch(() => {});
+(function bconnect() {
+  const ws = new WebSocket(BWS);
+  ws.onmessage = e => { JSON.parse(e.data).forEach(upd); };
+  ws.onclose = () => setTimeout(bconnect, 3000);
+})();
+setInterval(() => { if (activeTab === "markets") renderMarkets(); }, 1000);
+["mk-q", "mk-quote", "mk-sort"].forEach(id => $(id).addEventListener("input", renderMarkets));
+function renderMarkets() {
+  if (!mkt.size) return;
+  const q = $("mk-q").value.trim().toUpperCase(), quote = $("mk-quote").value, sort = $("mk-sort").value;
+  let rows = [...mkt.values()].filter(r => r.q > 0 && (!quote || r.s.endsWith(quote)) && (!q || r.s.includes(q)));
+  const cmp = { q: (a, b) => b.q - a.q, chg: (a, b) => b.chg - a.chg, abs: (a, b) => Math.abs(b.chg) - Math.abs(a.chg), s: (a, b) => a.s.localeCompare(b.s) }[sort];
+  rows.sort(cmp);
+  $("mk-count").textContent = `${num(rows.length)} pairs match · ${num(mkt.size)} symbols streaming · updates every second`;
+  const engineSym = info ? info.symbol : "";
+  $("mk-table").innerHTML = `<thead><tr><th>Pair</th><th class="n">Last</th><th class="n">24h</th><th class="n">High</th><th class="n">Low</th><th class="n">Volume (quote)</th></tr></thead><tbody>` +
+    rows.slice(0, 60).map(r => `<tr data-s="${r.s}" class="${r.s === selSym ? "sel" : ""}"><td class="m"><b>${r.s}</b>${r.s === engineSym ? ' <span class="pill info">engine</span>' : ""}</td><td class="n">${mpx(r.c)}</td><td class="n ${r.chg >= 0 ? "up" : "down"}">${r.chg >= 0 ? "+" : ""}${r.chg.toFixed(2)}%</td><td class="n">${mpx(r.h)}</td><td class="n">${mpx(r.l)}</td><td class="n">${big(r.q)}</td></tr>`).join("") + `</tbody>`;
+  $("mk-table").querySelectorAll("tr[data-s]").forEach(tr => tr.onclick = () => { selSym = tr.dataset.s; loadKlines(selSym); renderMarkets(); });
+  const favs = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"];
+  $("mk-cards").innerHTML = favs.filter(s => mkt.has(s)).map(s => { const r = mkt.get(s); return `<button class="mcard ${s === selSym ? "sel" : ""}" data-s="${s}"><div class="s">${s}</div><div class="p">${mpx(r.c)}</div><div class="ch ${r.chg >= 0 ? "up" : "down"}">${r.chg >= 0 ? "▲ +" : "▼ "}${r.chg.toFixed(2)}% 24h</div></button>`; }).join("");
+  $("mk-cards").querySelectorAll(".mcard").forEach(b => b.onclick = () => { selSym = b.dataset.s; loadKlines(selSym); renderMarkets(); });
+  const r = mkt.get(selSym);
+  if (r) {
+    $("mk-detail").innerHTML = [["Last", mpx(r.c)], ["24h change", `<span class="${r.chg >= 0 ? "up" : "down"}">${r.chg >= 0 ? "+" : ""}${r.chg.toFixed(2)}%</span>`], ["24h high / low", `${mpx(r.h)} / ${mpx(r.l)}`], ["24h volume", `${big(r.v)} base · ${big(r.q)} quote`]].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  }
+}
+function loadKlines(sym) {
+  $("mk-sel").textContent = sym;
+  $("mk-cmd").textContent = `tickrail run -c config/binance.toml --set feed.symbol=${sym}`;
+  if (!chKline) chKline = new LineChart($("ch-kline"), { fmt: v => mpx(v), xfmt: v => "−" + Math.round(v / 60) + " min" });
+  clearTimeout(klineTimer);
+  fetch(`${BREST}/klines?symbol=${sym}&interval=1m&limit=180`).then(r => r.json()).then(k => {
+    if (sym !== selSym) return;
+    const closes = k.map(x => +x[4]), t0 = k.length ? k[k.length - 1][0] : 0;
+    chKline.o.fmt = v => mpx(v);
+    chKline.set([{ name: sym, data: closes, color: closes[closes.length - 1] >= closes[0] ? "--bid" : "--ask", width: 1.8, fill: true }], k.map(x => (x[0] - k[0][0]) / 1000));
+  }).catch(() => {});
+  klineTimer = setTimeout(() => { if (activeTab === "markets") loadKlines(selSym); }, 30000);
+}
+$("mk-copy").onclick = () => { const t = $("mk-cmd").textContent; navigator.clipboard.writeText(t).then(() => { $("mk-copy").textContent = "Copied"; setTimeout(() => $("mk-copy").textContent = "Copy command", 1500); }).catch(() => { const r = document.createRange(); r.selectNodeContents($("mk-cmd")); getSelection().removeAllRanges(); getSelection().addRange(r); }); };
+
+applyTheme();
+</script>
+</body>
+</html>

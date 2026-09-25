@@ -1,0 +1,18 @@
+[package]
+name = "tickrail-telemetry"
+description = "Off-hot-path metrics aggregation, latency histograms and the web dashboard"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tickrail-core.workspace = true
+tickrail-engine.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+hdrhistogram.workspace = true
+tokio.workspace = true
+axum.workspace = true
+futures-util.workspace = true
