@@ -1,0 +1,31 @@
+name: New venue adapter
+description: Request (or offer) support for an exchange, broker or data vendor
+labels: ["adapter"]
+body:
+  - type: input
+    id: venue
+    attributes:
+      label: Venue
+      placeholder: "Bybit spot, Coinbase Advanced, Interactive Brokers, Databento ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: class
+    attributes:
+      label: Asset class
+      options: [crypto, equities, futures, options, fx, other]
+    validations:
+      required: true
+  - type: textarea
+    id: api
+    attributes:
+      label: API
+      description: Links to the market-data docs. Does it need an account or key? Any rate limits?
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'll write this adapter (see CONTRIBUTING.md, "Adding a venue adapter")

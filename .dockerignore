@@ -1,0 +1,7 @@
+target
+bindings/python/target
+data
+internal
+research/.venv
+**/.venv
+.git

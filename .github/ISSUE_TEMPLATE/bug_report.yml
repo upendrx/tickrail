@@ -1,0 +1,36 @@
+name: Bug report
+description: Something doesn't work the way the docs say it should
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Command line and config (remove any API keys). A journal file helps a lot for engine bugs.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "tickrail --version, or a git sha"
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and CPU
+      placeholder: "Ubuntu 24.04 x86_64, macOS 15 arm64, Windows 11 ..."
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output
+      render: text
